@@ -9,3 +9,13 @@ type Resource struct {
 func (r Resource) URN() string {
 	return r.Project + "." + r.Dataset + "." + r.Name
 }
+
+type ResourceGroup struct {
+	Project string
+	Dataset string
+	Names   []string
+}
+
+func (r ResourceGroup) URN() string {
+	return r.Project + "." + r.Dataset
+}
