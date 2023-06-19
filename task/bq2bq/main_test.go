@@ -7,128 +7,18 @@ import (
 	"testing"
 	"time"
 
-	"cloud.google.com/go/bigquery"
 	"github.com/googleapis/google-cloud-go-testing/bigquery/bqiface"
 	"github.com/goto/optimus/sdk/plugin"
-	"github.com/goto/transformers/task/bq2bq/upstream"
 	"github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+
+	"github.com/goto/transformers/task/bq2bq/upstream"
 )
 
 type bqClientMock struct {
 	mock.Mock
 	bqiface.Client
-}
-
-func (cli *bqClientMock) Location() string {
-	panic("not implemented")
-}
-
-func (cli *bqClientMock) SetLocation(string) {
-	panic("not implemented")
-}
-
-func (cli *bqClientMock) Close() error {
-	return cli.Called().Error(0)
-}
-
-func (cli *bqClientMock) Dataset(dataset string) bqiface.Dataset {
-	panic("not implemented")
-}
-
-func (cli *bqClientMock) DatasetInProject(project string, dataset string) bqiface.Dataset {
-	panic("not implemented")
-}
-
-func (cli *bqClientMock) Datasets(context.Context) bqiface.DatasetIterator {
-	panic("not implemented")
-}
-
-func (cli *bqClientMock) DatasetsInProject(context.Context, string) bqiface.DatasetIterator {
-	panic("not implemented")
-}
-
-func (cli *bqClientMock) Query(q string) bqiface.Query {
-	return cli.Called(q).Get(0).(bqiface.Query)
-}
-
-func (cli *bqClientMock) JobFromID(context.Context, string) (bqiface.Job, error) {
-	panic("not implemented")
-}
-
-func (cli *bqClientMock) JobFromIDLocation(context.Context, string, string) (bqiface.Job, error) {
-	panic("not implemented")
-}
-
-func (cli *bqClientMock) Jobs(context.Context) bqiface.JobIterator {
-	panic("not implemented")
-}
-
-func (cli *bqClientMock) embedToIncludeNewMethods() {
-	panic("not implemented")
-}
-
-type bqJob struct {
-	mock.Mock
-	bqiface.Job
-}
-
-func (j *bqJob) Wait(ctx context.Context) (*bigquery.JobStatus, error) {
-	args := j.Called(ctx)
-	return args.Get(0).(*bigquery.JobStatus), args.Error(1)
-}
-
-func (j *bqJob) ID() string {
-	panic("not implemented")
-}
-
-func (j *bqJob) Location() string {
-	panic("not implemented")
-}
-
-func (j *bqJob) Config() (bigquery.JobConfig, error) {
-	panic("not implemented")
-}
-
-func (j *bqJob) Status(c context.Context) (*bigquery.JobStatus, error) {
-	args := j.Called(c)
-	return args.Get(0).(*bigquery.JobStatus), args.Error(1)
-}
-
-func (j *bqJob) LastStatus() *bigquery.JobStatus {
-	return j.Called().Get(0).(*bigquery.JobStatus)
-}
-
-func (j *bqJob) Cancel(context.Context) error {
-	panic("not implemented")
-}
-
-func (j *bqJob) Read(context.Context) (bqiface.RowIterator, error) {
-	panic("not implemented")
-}
-
-type bqQuery struct {
-	mock.Mock
-	bqiface.Query
-}
-
-func (q *bqQuery) JobIDConfig() *bigquery.JobIDConfig {
-	return q.Called().Get(0).(*bigquery.JobIDConfig)
-}
-
-func (q *bqQuery) SetQueryConfig(c bqiface.QueryConfig) {
-	q.Called(c)
-}
-
-func (q *bqQuery) Run(c context.Context) (bqiface.Job, error) {
-	args := q.Called(c)
-	return args.Get(0).(bqiface.Job), args.Error(1)
-}
-
-func (q *bqQuery) Read(c context.Context) (bqiface.RowIterator, error) {
-	args := q.Called(c)
-	return args.Get(0).(bqiface.RowIterator), args.Error(1)
 }
 
 type bqClientFactoryMock struct {
