@@ -14,18 +14,10 @@ import (
 )
 
 func TestNewExtractor(t *testing.T) {
-	resourcesToIgnore := []upstream.Resource{
-		{
-			Project: "project_test",
-			Dataset: "dataset_test",
-			Name:    "name_test",
-		},
-	}
-
 	t.Run("should return nil and error if client is nil", func(t *testing.T) {
 		var client bqiface.Client
 
-		actualExtractor, actualError := upstream.NewExtractor(client, resourcesToIgnore)
+		actualExtractor, actualError := upstream.NewExtractor(client)
 
 		assert.Nil(t, actualExtractor)
 		assert.EqualError(t, actualError, "client is nil")
@@ -34,7 +26,7 @@ func TestNewExtractor(t *testing.T) {
 	t.Run("should return extractor and nil if no error is encountered", func(t *testing.T) {
 		client := new(ClientMock)
 
-		actualExtractor, actualError := upstream.NewExtractor(client, resourcesToIgnore)
+		actualExtractor, actualError := upstream.NewExtractor(client)
 
 		assert.NotNil(t, actualExtractor)
 		assert.NoError(t, actualError)
@@ -107,7 +99,7 @@ func TestExtractor(t *testing.T) {
 					},
 				}
 
-				extractor, err := upstream.NewExtractor(client, resourcestoIgnore)
+				extractor, err := upstream.NewExtractor(client)
 				assert.NotNil(t, extractor)
 				assert.NoError(t, err)
 
@@ -123,7 +115,7 @@ func TestExtractor(t *testing.T) {
 				}).Return(nil).Once()
 				rowIterator.On("Next", mock.Anything).Return(iterator.Done).Once()
 
-				actualUpstreams, actualError := extractor.ExtractUpstreams(ctx, test.QueryRequest)
+				actualUpstreams, actualError := extractor.ExtractUpstreams(ctx, test.QueryRequest, resourcestoIgnore)
 
 				assert.EqualValues(t, test.ExpectedUpstreams, actualUpstreams, test.Message)
 				assert.NoError(t, actualError, test.Message)
@@ -142,7 +134,7 @@ func TestExtractor(t *testing.T) {
 				},
 			}
 
-			extractor, err := upstream.NewExtractor(client, resourcestoIgnore)
+			extractor, err := upstream.NewExtractor(client)
 			assert.NotNil(t, extractor)
 			assert.NoError(t, err)
 
@@ -194,7 +186,7 @@ func TestExtractor(t *testing.T) {
 				},
 			}
 
-			actualUpstreams, actualError := extractor.ExtractUpstreams(ctx, queryRequest)
+			actualUpstreams, actualError := extractor.ExtractUpstreams(ctx, queryRequest, resourcestoIgnore)
 
 			assert.EqualValues(t, expectedUpstreams, actualUpstreams)
 			assert.NoError(t, actualError)
