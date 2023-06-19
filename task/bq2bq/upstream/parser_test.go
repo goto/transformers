@@ -10,9 +10,9 @@ import (
 
 func TestParseTopLevelUpstreamsFromQuery(t *testing.T) {
 	t.Run("parse test", func(t *testing.T) {
-		type Set map[upstream.Resource]bool
-		NewSet := func(resources ...upstream.Resource) Set {
-			set := make(Set)
+		type set map[upstream.Resource]bool
+		newSetFn := func(resources ...upstream.Resource) set {
+			set := make(set)
 
 			for _, r := range resources {
 				set[r] = true
@@ -292,8 +292,8 @@ func TestParseTopLevelUpstreamsFromQuery(t *testing.T) {
 			t.Run(test.Name, func(t *testing.T) {
 				actualSources := upstream.ParseTopLevelUpstreamsFromQuery(test.InputQuery)
 
-				actualSet := NewSet(actualSources...)
-				expectedSet := NewSet(test.ExpectedSources...)
+				actualSet := newSetFn(actualSources...)
+				expectedSet := newSetFn(test.ExpectedSources...)
 
 				assert.Equal(t, expectedSet, actualSet)
 			})
