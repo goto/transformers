@@ -165,6 +165,11 @@ func TestParseTopLevelUpstreamsFromQuery(t *testing.T) {
 						Dataset: "maximum",
 						Name:    "overdrive",
 					},
+					{
+						Project: "project",
+						Dataset: "maximum",
+						Name:    "overdrive",
+					},
 				},
 			},
 			{
@@ -283,6 +288,30 @@ func TestParseTopLevelUpstreamsFromQuery(t *testing.T) {
 						Project: "data-engineering",
 						Dataset: "testing",
 						Name:    "tableABC",
+					},
+				},
+			},
+			{
+				Name: "one or more sources are stated together under from clauses",
+				InputQuery: `
+					select *
+					from
+						pseudo_table1,
+						data-engineering.testing.tableABC,
+						pseudo_table2 as pt2
+						data-engineering.testing.tableDEF as backup_table,
+						/* @ignoreupstream */ data-engineering.testing.tableGHI as ignored_table,
+					`,
+				ExpectedSources: []upstream.Resource{
+					{
+						Project: "data-engineering",
+						Dataset: "testing",
+						Name:    "tableABC",
+					},
+					{
+						Project: "data-engineering",
+						Dataset: "testing",
+						Name:    "tableDEF",
 					},
 				},
 			},
