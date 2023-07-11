@@ -250,7 +250,9 @@ func (b *BQ2BQ) GenerateDependencies(ctx context.Context, request plugin.Generat
 	}
 
 	flattenedUpstreams := upstream.FlattenUpstreams(upstreams)
-	formattedUpstreams := b.formatUpstreams(flattenedUpstreams, func(r upstream.Resource) string {
+	uniqueUpstreams := upstream.UniqueFilterResources(flattenedUpstreams)
+
+	formattedUpstreams := b.formatUpstreams(uniqueUpstreams, func(r upstream.Resource) string {
 		name := fmt.Sprintf("%s:%s.%s", r.Project, r.Dataset, r.Name)
 		return fmt.Sprintf(plugin.DestinationURNFormat, selfTable.Type, name)
 	})
