@@ -292,14 +292,30 @@ func TestParseTopLevelUpstreamsFromQuery(t *testing.T) {
 				},
 			},
 			{
+				Name: "ignore `create view` in ddl query",
+				InputQuery: `
+					create view data-engineering.testing.tableABC
+					select *
+					from
+						data-engineering.testing.tableDEF,
+					`,
+				ExpectedSources: []upstream.Resource{
+					{
+						Project: "data-engineering",
+						Dataset: "testing",
+						Name:    "tableDEF",
+					},
+				},
+			},
+			{
 				Name: "one or more sources are stated together under from clauses",
 				InputQuery: `
 					select *
 					from
 						pseudo_table1,
-						data-engineering.testing.tableABC,
+						` + "`data-engineering.testing.tableABC`," + `
 						pseudo_table2 as pt2
-						data-engineering.testing.tableDEF as backup_table,
+						` + "`data-engineering.testing.tableDEF`," + ` as backup_table,
 						/* @ignoreupstream */ data-engineering.testing.tableGHI as ignored_table,
 					`,
 				ExpectedSources: []upstream.Resource{
