@@ -39,6 +39,7 @@ func TestFlattenUpstreams(t *testing.T) {
 							Name:    "name_test_4",
 						},
 					},
+					nil,
 				},
 			},
 		}
