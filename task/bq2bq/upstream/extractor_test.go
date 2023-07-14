@@ -70,7 +70,7 @@ func TestExtractor(t *testing.T) {
 				{
 					Message:           "should return filtered upstreams for select statements with ignore statement",
 					QueryRequest:      "Select * from /* @ignoreupstream */ proj.dataset.table1",
-					ExpectedUpstreams: []*upstream.Upstream{},
+					ExpectedUpstreams: nil,
 				},
 				{
 					Message:      "should return filtered upstreams for select statements with ignore statement for view",

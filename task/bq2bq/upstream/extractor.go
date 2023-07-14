@@ -30,10 +30,15 @@ func (e *Extractor) ExtractUpstreams(ctx context.Context, query string, resource
 		ignoredResources[r] = true
 	}
 
-	return e.extractUpstreamsFromQuery(ctx, query, ignoredResources, ParseTopLevelUpstreamsFromQuery)
+	metResource := make(map[Resource]bool)
+	return e.extractUpstreamsFromQuery(ctx, query, ignoredResources, metResource, ParseTopLevelUpstreamsFromQuery)
 }
 
-func (e *Extractor) extractUpstreamsFromQuery(ctx context.Context, query string, ignoredResources map[Resource]bool, parseFn QueryParser) ([]*Upstream, error) {
+func (e *Extractor) extractUpstreamsFromQuery(
+	ctx context.Context, query string,
+	ignoredResources, metResource map[Resource]bool,
+	parseFn QueryParser,
+) ([]*Upstream, error) {
 	upstreamResources := parseFn(query)
 
 	uniqueUpstreamResources := UniqueFilterResources(upstreamResources)
@@ -42,7 +47,7 @@ func (e *Extractor) extractUpstreamsFromQuery(ctx context.Context, query string,
 
 	resourceGroups := GroupResources(filteredUpstreamResources)
 
-	output := make([]*Upstream, 0)
+	var output []*Upstream
 	for _, group := range resourceGroups {
 		schemas, err := ReadSchemasUnderGroup(ctx, e.client, group)
 		if err != nil {
@@ -54,7 +59,7 @@ func (e *Extractor) extractUpstreamsFromQuery(ctx context.Context, query string,
 		restsNodes := convertSchemasToNodes(rest)
 		output = append(output, restsNodes...)
 
-		nestedNodes, err := e.extractNestedNodes(ctx, nestedable, ignoredResources)
+		nestedNodes, err := e.extractNestedNodes(ctx, nestedable, ignoredResources, metResource)
 		if err != nil {
 			return nil, err
 		}
@@ -65,15 +70,23 @@ func (e *Extractor) extractUpstreamsFromQuery(ctx context.Context, query string,
 	return output, nil
 }
 
-func (e *Extractor) extractNestedNodes(ctx context.Context, schemas []*Schema, ignoredResources map[Resource]bool) ([]*Upstream, error) {
+func (e *Extractor) extractNestedNodes(
+	ctx context.Context, schemas []*Schema,
+	ignoredResources, metResource map[Resource]bool,
+) ([]*Upstream, error) {
 	output := make([]*Upstream, len(schemas))
 
 	for i, sch := range schemas {
-		nodes, err := e.getNodes(ctx, sch, ignoredResources)
+		if metResource[sch.Resource] {
+			continue
+		}
+
+		nodes, err := e.getNodes(ctx, sch, ignoredResources, metResource)
 		if err != nil {
 			return nil, err
 		}
 
+		metResource[sch.Resource] = true
 		output[i] = &Upstream{
 			Resource:  sch.Resource,
 			Upstreams: nodes,
@@ -83,14 +96,17 @@ func (e *Extractor) extractNestedNodes(ctx context.Context, schemas []*Schema, i
 	return output, nil
 }
 
-func (e *Extractor) getNodes(ctx context.Context, schema *Schema, ignoredResources map[Resource]bool) ([]*Upstream, error) {
+func (e *Extractor) getNodes(
+	ctx context.Context, schema *Schema,
+	ignoredResources, metResource map[Resource]bool,
+) ([]*Upstream, error) {
 	key := schema.Resource.URN()
 
 	if existingNodes, ok := e.schemaToUpstreams[key]; ok {
 		return existingNodes, nil
 	}
 
-	nodes, err := e.extractUpstreamsFromQuery(ctx, schema.DDL, ignoredResources, ParseNestedUpsreamsFromDDL)
+	nodes, err := e.extractUpstreamsFromQuery(ctx, schema.DDL, ignoredResources, metResource, ParseNestedUpsreamsFromDDL)
 	if err != nil {
 		return nil, err
 	}
