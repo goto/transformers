@@ -3,11 +3,13 @@ package upstream
 import (
 	"context"
 	"errors"
+	"sync"
 
 	"github.com/googleapis/google-cloud-go-testing/bigquery/bqiface"
 )
 
 type Extractor struct {
+	mutex  *sync.Mutex
 	client bqiface.Client
 
 	schemaToUpstreams map[string][]*Upstream
@@ -19,6 +21,7 @@ func NewExtractor(client bqiface.Client) (*Extractor, error) {
 	}
 
 	return &Extractor{
+		mutex:             &sync.Mutex{},
 		client:            client,
 		schemaToUpstreams: make(map[string][]*Upstream),
 	}, nil
@@ -102,7 +105,11 @@ func (e *Extractor) getNodes(
 ) ([]*Upstream, error) {
 	key := schema.Resource.URN()
 
-	if existingNodes, ok := e.schemaToUpstreams[key]; ok {
+	e.mutex.Lock()
+	existingNodes, ok := e.schemaToUpstreams[key]
+	e.mutex.Unlock()
+
+	if ok {
 		return existingNodes, nil
 	}
 
@@ -111,7 +118,9 @@ func (e *Extractor) getNodes(
 		return nil, err
 	}
 
+	e.mutex.Lock()
 	e.schemaToUpstreams[key] = nodes
+	e.mutex.Unlock()
 
 	return nodes, nil
 }
