@@ -331,6 +331,33 @@ func TestParseTopLevelUpstreamsFromQuery(t *testing.T) {
 					},
 				},
 			},
+			{
+				Name: "one or more sources are from wild-card query",
+				InputQuery: `
+					select *
+					from data-engineering.testing.tableA*
+
+					select *
+					from ` +
+					"`data-engineering.testing.tableB*`" + `
+
+					select *
+					from
+						/*@ignoreupstream*/ data-engineering.testing.tableC*
+					`,
+				ExpectedSources: []upstream.Resource{
+					{
+						Project: "data-engineering",
+						Dataset: "testing",
+						Name:    "tableA*",
+					},
+					{
+						Project: "data-engineering",
+						Dataset: "testing",
+						Name:    "tableB*",
+					},
+				},
+			},
 		}
 
 		for _, test := range testCases {
