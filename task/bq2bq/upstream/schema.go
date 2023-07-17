@@ -66,14 +66,23 @@ func ReadSchemasUnderGroup(ctx context.Context, client bqiface.Client, group *Re
 }
 
 func buildQuery(group *ResourceGroup) string {
-	modifiedNames := make([]string, len(group.Names))
-	for i, n := range group.Names {
-		modifiedNames[i] = "'" + n + "'"
+	var nameQueries, prefixQueries []string
+	for _, n := range group.Names {
+		suffix := "*"
+		if strings.HasSuffix(n, suffix) {
+			prefix, _ := strings.CutSuffix(n, suffix)
+			prefixQuery := fmt.Sprintf("or STARTS_WITH(%s, %s)", n, prefix)
+			prefixQueries = append(prefixQueries, prefixQuery)
+		} else {
+			nameQuery := fmt.Sprintf("'%s'", n)
+			nameQueries = append(nameQueries, nameQuery)
+		}
 	}
 
 	return "SELECT table_catalog, table_schema, table_name, table_type, ddl\n" +
 		fmt.Sprintf("FROM `%s.%s.INFORMATION_SCHEMA.TABLES`\n", group.Project, group.Dataset) +
-		fmt.Sprintf("WHERE table_name in (%s);", strings.Join(modifiedNames, ", "))
+		fmt.Sprintf("WHERE table_name in (%s)\n", strings.Join(nameQueries, ", ")) +
+		strings.Join(prefixQueries, "\n")
 }
 
 func convertToSchema(values []bigquery.Value) (*Schema, error) {
