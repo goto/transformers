@@ -77,23 +77,23 @@ func (e *Extractor) extractNestedNodes(
 	ctx context.Context, schemas []*Schema,
 	ignoredResources, metResource map[Resource]bool,
 ) ([]*Upstream, error) {
-	output := make([]*Upstream, len(schemas))
+	var output []*Upstream
 
-	for i, sch := range schemas {
+	for _, sch := range schemas {
 		if metResource[sch.Resource] {
 			continue
 		}
+		metResource[sch.Resource] = true
 
 		nodes, err := e.getNodes(ctx, sch, ignoredResources, metResource)
 		if err != nil {
 			return nil, err
 		}
 
-		metResource[sch.Resource] = true
-		output[i] = &Upstream{
+		output = append(output, &Upstream{
 			Resource:  sch.Resource,
 			Upstreams: nodes,
-		}
+		})
 	}
 
 	return output, nil

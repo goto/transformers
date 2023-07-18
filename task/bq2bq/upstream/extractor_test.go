@@ -191,5 +191,77 @@ func TestExtractor(t *testing.T) {
 			assert.EqualValues(t, expectedUpstreams, actualUpstreams)
 			assert.NoError(t, actualError)
 		})
+
+		t.Run("should return upstreams even if cyclic is encountered", func(t *testing.T) {
+			client := new(ClientMock)
+			query := new(QueryMock)
+			rowIterator := new(RowIteratorMock)
+			resourcestoIgnore := []upstream.Resource{}
+
+			extractor, err := upstream.NewExtractor(client)
+			assert.NotNil(t, extractor)
+			assert.NoError(t, err)
+
+			ctx := context.Background()
+			queryRequest := "select * from `project_test_1.dataset_test_1.cyclic_test_1`"
+
+			client.On("Query", mock.Anything).Return(query)
+
+			query.On("Read", mock.Anything).Return(rowIterator, nil)
+
+			rowIterator.On("Next", mock.Anything).Run(func(args mock.Arguments) {
+				v := args.Get(0).(*[]bigquery.Value)
+				*v = []bigquery.Value{"project_test_1", "dataset_test_1", "cyclic_test_1", "VIEW", "select * from project_test_3.dataset_test_3.cyclic_test_3"}
+			}).Return(nil).Once()
+			rowIterator.On("Next", mock.Anything).Return(iterator.Done).Once()
+			rowIterator.On("Next", mock.Anything).Run(func(args mock.Arguments) {
+				v := args.Get(0).(*[]bigquery.Value)
+				*v = []bigquery.Value{"project_test_3", "dataset_test_3", "cyclic_test_3", "VIEW", "select * from project_test_2.dataset_test_2.cyclic_test_2"}
+			}).Return(nil).Once()
+			rowIterator.On("Next", mock.Anything).Return(iterator.Done).Once()
+			rowIterator.On("Next", mock.Anything).Run(func(args mock.Arguments) {
+				v := args.Get(0).(*[]bigquery.Value)
+				*v = []bigquery.Value{"project_test_2", "dataset_test_2", "cyclic_test_2", "VIEW", "select * from project_test_1.dataset_test_1.cyclic_test_1"}
+			}).Return(nil).Once()
+			rowIterator.On("Next", mock.Anything).Return(iterator.Done).Once()
+			rowIterator.On("Next", mock.Anything).Run(func(args mock.Arguments) {
+				v := args.Get(0).(*[]bigquery.Value)
+				*v = []bigquery.Value{"project_test_1", "dataset_test_1", "cyclic_test_1", "VIEW", "select * from project_test_3.dataset_test_3.cyclic_test_3"}
+			}).Return(nil).Once()
+			rowIterator.On("Next", mock.Anything).Return(iterator.Done).Once()
+
+			expectedUpstreams := []*upstream.Upstream{
+				{
+					Resource: upstream.Resource{
+						Project: "project_test_1",
+						Dataset: "dataset_test_1",
+						Name:    "cyclic_test_1",
+					},
+					Upstreams: []*upstream.Upstream{
+						{
+							Resource: upstream.Resource{
+								Project: "project_test_3",
+								Dataset: "dataset_test_3",
+								Name:    "cyclic_test_3",
+							},
+							Upstreams: []*upstream.Upstream{
+								{
+									Resource: upstream.Resource{
+										Project: "project_test_2",
+										Dataset: "dataset_test_2",
+										Name:    "cyclic_test_2",
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			actualUpstreams, actualError := extractor.ExtractUpstreams(ctx, queryRequest, resourcestoIgnore)
+
+			assert.EqualValues(t, expectedUpstreams, actualUpstreams)
+			assert.NoError(t, actualError)
+		})
 	})
 }
