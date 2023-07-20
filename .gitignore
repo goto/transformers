@@ -17,6 +17,7 @@
 .DS_Store
 
 dist
+distyaml
 
 temp
 docker-compose.yml
