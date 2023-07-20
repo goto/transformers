@@ -3,6 +3,8 @@ package upstream
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/googleapis/google-cloud-go-testing/bigquery/bqiface"
@@ -81,7 +83,8 @@ func (e *Extractor) extractNestedNodes(
 
 	for _, sch := range schemas {
 		if metResource[sch.Resource] {
-			continue
+			msg := e.getCircularMessage(metResource)
+			return nil, fmt.Errorf("circular reference is detected: [%s]", msg)
 		}
 		metResource[sch.Resource] = true
 
@@ -123,4 +126,13 @@ func (e *Extractor) getNodes(
 	e.mutex.Unlock()
 
 	return nodes, nil
+}
+
+func (*Extractor) getCircularMessage(metResource map[Resource]bool) string {
+	var urns []string
+	for resource := range metResource {
+		urns = append(urns, resource.URN())
+	}
+
+	return strings.Join(urns, ", ")
 }
