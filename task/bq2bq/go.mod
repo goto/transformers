@@ -1,6 +1,6 @@
 module github.com/goto/transformers/task/bq2bq
 
-go 1.18
+go 1.20
 
 require (
 	cloud.google.com/go/bigquery v1.44.0
