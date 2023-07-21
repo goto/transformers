@@ -17,7 +17,8 @@ import (
 )
 
 const (
-	MaxBQClientReuse = 5
+	MaxBQClientReuse  = 5
+	MaxExtractorReuse = 10
 )
 
 type DefaultBQClientFactory struct {
@@ -56,13 +57,28 @@ func (fac *DefaultBQClientFactory) New(ctx context.Context, svcAccount string) (
 }
 
 type DefaultUpstreamExtractorFactory struct {
+	mu sync.Mutex
+
+	cachedExtractor UpstreamExtractor
+	timeUsed        int
 }
 
 func (d *DefaultUpstreamExtractorFactory) New(client bqiface.Client) (UpstreamExtractor, error) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	if d.cachedExtractor != nil && d.timeUsed < MaxExtractorReuse {
+		d.timeUsed++
+		return d.cachedExtractor, nil
+	}
+
 	extractor, err := upstream.NewExtractor(client)
 	if err != nil {
 		return nil, fmt.Errorf("error initializing extractor: %w", err)
 	}
+
+	d.cachedExtractor = extractor
+	d.timeUsed = 1
 
 	return extractor, nil
 }

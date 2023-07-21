@@ -166,7 +166,7 @@ func TestReadSchemasUnderGroup(t *testing.T) {
 		group := &upstream.ResourceGroup{
 			Project: "project_test",
 			Dataset: "dataset_test",
-			Names:   []string{"table_test"},
+			Names:   []string{"table_test", "table_wild*"},
 		}
 
 		queryContent := buildQuery(group)
@@ -176,7 +176,15 @@ func TestReadSchemasUnderGroup(t *testing.T) {
 
 		rowIterator.On("Next", mock.Anything).Run(func(args mock.Arguments) {
 			v := args.Get(0).(*[]bigquery.Value)
-			*v = []bigquery.Value{"project_test", "dataset_test", "name_test", "VIEW", "select 1;"}
+			*v = []bigquery.Value{"project_test", "dataset_test", "test_table", "VIEW", "select 1;"}
+		}).Return(nil).Once()
+		rowIterator.On("Next", mock.Anything).Run(func(args mock.Arguments) {
+			v := args.Get(0).(*[]bigquery.Value)
+			*v = []bigquery.Value{"project_test", "dataset_test", "table_wild_1", "BASE TABLE", ""}
+		}).Return(nil).Once()
+		rowIterator.On("Next", mock.Anything).Run(func(args mock.Arguments) {
+			v := args.Get(0).(*[]bigquery.Value)
+			*v = []bigquery.Value{"project_test", "dataset_test", "table_wild_2", "BASE TABLE", ""}
 		}).Return(nil).Once()
 		rowIterator.On("Next", mock.Anything).Return(iterator.Done).Once()
 
@@ -185,10 +193,26 @@ func TestReadSchemasUnderGroup(t *testing.T) {
 				Resource: upstream.Resource{
 					Project: "project_test",
 					Dataset: "dataset_test",
-					Name:    "name_test",
+					Name:    "test_table",
 				},
 				Type: upstream.View,
 				DDL:  "select 1;",
+			},
+			{
+				Resource: upstream.Resource{
+					Project: "project_test",
+					Dataset: "dataset_test",
+					Name:    "table_wild_1",
+				},
+				Type: upstream.BaseTable,
+			},
+			{
+				Resource: upstream.Resource{
+					Project: "project_test",
+					Dataset: "dataset_test",
+					Name:    "table_wild_2",
+				},
+				Type: upstream.BaseTable,
 			},
 		}
 
@@ -200,14 +224,34 @@ func TestReadSchemasUnderGroup(t *testing.T) {
 }
 
 func buildQuery(group *upstream.ResourceGroup) string {
-	modifiedNames := make([]string, len(group.Names))
-	for i, n := range group.Names {
-		modifiedNames[i] = "'" + n + "'"
+	var nameQueries, prefixQueries []string
+	for _, n := range group.Names {
+		suffix := "*"
+		if strings.HasSuffix(n, suffix) {
+			prefix, _ := strings.CutSuffix(n, suffix)
+			prefixQuery := fmt.Sprintf("STARTS_WITH(table_name, '%s')", prefix)
+			prefixQueries = append(prefixQueries, prefixQuery)
+		} else {
+			nameQuery := fmt.Sprintf("'%s'", n)
+			nameQueries = append(nameQueries, nameQuery)
+		}
+	}
+
+	names := strings.Join(nameQueries, ", ")
+	prefixes := strings.Join(prefixQueries, " or\n")
+
+	var whereClause string
+	if len(nameQueries) > 0 && len(prefixQueries) > 0 {
+		whereClause = fmt.Sprintf("WHERE table_name in (%s) or %s", names, prefixes)
+	} else if len(nameQueries) > 0 {
+		whereClause = fmt.Sprintf("WHERE table_name in (%s)", names)
+	} else if len(prefixQueries) > 0 {
+		whereClause = fmt.Sprintf("WHERE %s", prefixes)
 	}
 
 	return "SELECT table_catalog, table_schema, table_name, table_type, ddl\n" +
 		fmt.Sprintf("FROM `%s.%s.INFORMATION_SCHEMA.TABLES`\n", group.Project, group.Dataset) +
-		fmt.Sprintf("WHERE table_name in (%s);", strings.Join(modifiedNames, ", "))
+		whereClause
 }
 
 type ClientMock struct {

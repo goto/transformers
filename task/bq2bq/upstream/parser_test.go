@@ -165,6 +165,11 @@ func TestParseTopLevelUpstreamsFromQuery(t *testing.T) {
 						Dataset: "maximum",
 						Name:    "overdrive",
 					},
+					{
+						Project: "project",
+						Dataset: "maximum",
+						Name:    "overdrive",
+					},
 				},
 			},
 			{
@@ -283,6 +288,73 @@ func TestParseTopLevelUpstreamsFromQuery(t *testing.T) {
 						Project: "data-engineering",
 						Dataset: "testing",
 						Name:    "tableABC",
+					},
+				},
+			},
+			{
+				Name: "ignore `create view` in ddl query",
+				InputQuery: `
+					create view data-engineering.testing.tableABC
+					select *
+					from
+						data-engineering.testing.tableDEF,
+					`,
+				ExpectedSources: []upstream.Resource{
+					{
+						Project: "data-engineering",
+						Dataset: "testing",
+						Name:    "tableDEF",
+					},
+				},
+			},
+			{
+				Name: "one or more sources are stated together under from clauses",
+				InputQuery: `
+					select *
+					from
+						pseudo_table1,
+						` + "`data-engineering.testing.tableABC`," + `
+						pseudo_table2 as pt2
+						` + "`data-engineering.testing.tableDEF`," + ` as backup_table,
+						/* @ignoreupstream */ data-engineering.testing.tableGHI as ignored_table,
+					`,
+				ExpectedSources: []upstream.Resource{
+					{
+						Project: "data-engineering",
+						Dataset: "testing",
+						Name:    "tableABC",
+					},
+					{
+						Project: "data-engineering",
+						Dataset: "testing",
+						Name:    "tableDEF",
+					},
+				},
+			},
+			{
+				Name: "one or more sources are from wild-card query",
+				InputQuery: `
+					select *
+					from data-engineering.testing.tableA*
+
+					select *
+					from ` +
+					"`data-engineering.testing.tableB*`" + `
+
+					select *
+					from
+						/*@ignoreupstream*/ data-engineering.testing.tableC*
+					`,
+				ExpectedSources: []upstream.Resource{
+					{
+						Project: "data-engineering",
+						Dataset: "testing",
+						Name:    "tableA*",
+					},
+					{
+						Project: "data-engineering",
+						Dataset: "testing",
+						Name:    "tableB*",
 					},
 				},
 			},
