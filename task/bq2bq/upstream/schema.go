@@ -11,6 +11,8 @@ import (
 	"google.golang.org/api/iterator"
 )
 
+const wildCardSuffix = "*"
+
 type SchemaType string
 
 const (
@@ -68,9 +70,8 @@ func ReadSchemasUnderGroup(ctx context.Context, client bqiface.Client, group *Re
 func buildQuery(group *ResourceGroup) string {
 	var nameQueries, prefixQueries []string
 	for _, n := range group.Names {
-		suffix := "*"
-		if strings.HasSuffix(n, suffix) {
-			prefix, _ := strings.CutSuffix(n, suffix)
+		if strings.HasSuffix(n, wildCardSuffix) {
+			prefix, _ := strings.CutSuffix(n, wildCardSuffix)
 			prefixQuery := fmt.Sprintf("STARTS_WITH(table_name, '%s')", prefix)
 			prefixQueries = append(prefixQueries, prefixQuery)
 		} else {
