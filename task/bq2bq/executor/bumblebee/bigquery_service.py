@@ -78,7 +78,7 @@ class BigqueryService(BaseBigqueryService):
         logger.info("Job {} is initially in state {} of {} project".format(query_job.job_id, query_job.state,
                                                                            query_job.project))
 
-        if self.on_job_cancelled is not None:
+        if self.on_job_cancelled:
             self.on_job_cancelled(self.client, query_job)
 
         try:
@@ -129,7 +129,7 @@ class BigqueryService(BaseBigqueryService):
         logger.info("Job {} is initially in state {} of {} project".format(query_job.job_id, query_job.state,
                                                                            query_job.project))
 
-        if self.on_job_cancelled is not None:
+        if self.on_job_cancelled:
             self.on_job_cancelled(self.client, query_job)
 
         try:
