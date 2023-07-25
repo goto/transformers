@@ -3,11 +3,15 @@ package upstream
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
+	"sync"
 
 	"github.com/googleapis/google-cloud-go-testing/bigquery/bqiface"
 )
 
 type Extractor struct {
+	mutex  *sync.Mutex
 	client bqiface.Client
 
 	schemaToUpstreams map[string][]*Upstream
@@ -19,6 +23,7 @@ func NewExtractor(client bqiface.Client) (*Extractor, error) {
 	}
 
 	return &Extractor{
+		mutex:             &sync.Mutex{},
 		client:            client,
 		schemaToUpstreams: make(map[string][]*Upstream),
 	}, nil
@@ -30,10 +35,15 @@ func (e *Extractor) ExtractUpstreams(ctx context.Context, query string, resource
 		ignoredResources[r] = true
 	}
 
-	return e.extractUpstreamsFromQuery(ctx, query, ignoredResources, ParseTopLevelUpstreamsFromQuery)
+	metResource := make(map[Resource]bool)
+	return e.extractUpstreamsFromQuery(ctx, query, ignoredResources, metResource, ParseTopLevelUpstreamsFromQuery)
 }
 
-func (e *Extractor) extractUpstreamsFromQuery(ctx context.Context, query string, ignoredResources map[Resource]bool, parseFn QueryParser) ([]*Upstream, error) {
+func (e *Extractor) extractUpstreamsFromQuery(
+	ctx context.Context, query string,
+	ignoredResources, metResource map[Resource]bool,
+	parseFn QueryParser,
+) ([]*Upstream, error) {
 	upstreamResources := parseFn(query)
 
 	uniqueUpstreamResources := UniqueFilterResources(upstreamResources)
@@ -42,7 +52,7 @@ func (e *Extractor) extractUpstreamsFromQuery(ctx context.Context, query string,
 
 	resourceGroups := GroupResources(filteredUpstreamResources)
 
-	output := make([]*Upstream, 0)
+	var output []*Upstream
 	for _, group := range resourceGroups {
 		schemas, err := ReadSchemasUnderGroup(ctx, e.client, group)
 		if err != nil {
@@ -54,7 +64,7 @@ func (e *Extractor) extractUpstreamsFromQuery(ctx context.Context, query string,
 		restsNodes := convertSchemasToNodes(rest)
 		output = append(output, restsNodes...)
 
-		nestedNodes, err := e.extractNestedNodes(ctx, nestedable, ignoredResources)
+		nestedNodes, err := e.extractNestedNodes(ctx, nestedable, ignoredResources, metResource)
 		if err != nil {
 			return nil, err
 		}
@@ -65,37 +75,64 @@ func (e *Extractor) extractUpstreamsFromQuery(ctx context.Context, query string,
 	return output, nil
 }
 
-func (e *Extractor) extractNestedNodes(ctx context.Context, schemas []*Schema, ignoredResources map[Resource]bool) ([]*Upstream, error) {
-	output := make([]*Upstream, len(schemas))
+func (e *Extractor) extractNestedNodes(
+	ctx context.Context, schemas []*Schema,
+	ignoredResources, metResource map[Resource]bool,
+) ([]*Upstream, error) {
+	var output []*Upstream
 
-	for i, sch := range schemas {
-		nodes, err := e.getNodes(ctx, sch, ignoredResources)
+	for _, sch := range schemas {
+		if metResource[sch.Resource] {
+			msg := e.getCircularMessage(metResource)
+			return nil, fmt.Errorf("circular reference is detected: [%s]", msg)
+		}
+		metResource[sch.Resource] = true
+
+		nodes, err := e.getNodes(ctx, sch, ignoredResources, metResource)
 		if err != nil {
 			return nil, err
 		}
 
-		output[i] = &Upstream{
+		output = append(output, &Upstream{
 			Resource:  sch.Resource,
 			Upstreams: nodes,
-		}
+		})
 	}
 
 	return output, nil
 }
 
-func (e *Extractor) getNodes(ctx context.Context, schema *Schema, ignoredResources map[Resource]bool) ([]*Upstream, error) {
+func (e *Extractor) getNodes(
+	ctx context.Context, schema *Schema,
+	ignoredResources, metResource map[Resource]bool,
+) ([]*Upstream, error) {
 	key := schema.Resource.URN()
 
-	if existingNodes, ok := e.schemaToUpstreams[key]; ok {
+	e.mutex.Lock()
+	existingNodes, ok := e.schemaToUpstreams[key]
+	e.mutex.Unlock()
+
+	if ok {
 		return existingNodes, nil
 	}
 
-	nodes, err := e.extractUpstreamsFromQuery(ctx, schema.DDL, ignoredResources, ParseNestedUpsreamsFromDDL)
+	nodes, err := e.extractUpstreamsFromQuery(ctx, schema.DDL, ignoredResources, metResource, ParseNestedUpsreamsFromDDL)
 	if err != nil {
 		return nil, err
 	}
 
+	e.mutex.Lock()
 	e.schemaToUpstreams[key] = nodes
+	e.mutex.Unlock()
 
 	return nodes, nil
+}
+
+func (*Extractor) getCircularMessage(metResource map[Resource]bool) string {
+	var urns []string
+	for resource := range metResource {
+		urns = append(urns, resource.URN())
+	}
+
+	return strings.Join(urns, ", ")
 }

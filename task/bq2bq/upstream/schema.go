@@ -11,6 +11,8 @@ import (
 	"google.golang.org/api/iterator"
 )
 
+const wildCardSuffix = "*"
+
 type SchemaType string
 
 const (
@@ -66,14 +68,33 @@ func ReadSchemasUnderGroup(ctx context.Context, client bqiface.Client, group *Re
 }
 
 func buildQuery(group *ResourceGroup) string {
-	modifiedNames := make([]string, len(group.Names))
-	for i, n := range group.Names {
-		modifiedNames[i] = "'" + n + "'"
+	var nameQueries, prefixQueries []string
+	for _, n := range group.Names {
+		if strings.HasSuffix(n, wildCardSuffix) {
+			prefix, _ := strings.CutSuffix(n, wildCardSuffix)
+			prefixQuery := fmt.Sprintf("STARTS_WITH(table_name, '%s')", prefix)
+			prefixQueries = append(prefixQueries, prefixQuery)
+		} else {
+			nameQuery := fmt.Sprintf("'%s'", n)
+			nameQueries = append(nameQueries, nameQuery)
+		}
+	}
+
+	names := strings.Join(nameQueries, ", ")
+	prefixes := strings.Join(prefixQueries, " or\n")
+
+	var whereClause string
+	if len(nameQueries) > 0 && len(prefixQueries) > 0 {
+		whereClause = fmt.Sprintf("WHERE table_name in (%s) or %s", names, prefixes)
+	} else if len(nameQueries) > 0 {
+		whereClause = fmt.Sprintf("WHERE table_name in (%s)", names)
+	} else if len(prefixQueries) > 0 {
+		whereClause = fmt.Sprintf("WHERE %s", prefixes)
 	}
 
 	return "SELECT table_catalog, table_schema, table_name, table_type, ddl\n" +
 		fmt.Sprintf("FROM `%s.%s.INFORMATION_SCHEMA.TABLES`\n", group.Project, group.Dataset) +
-		fmt.Sprintf("WHERE table_name in (%s);", strings.Join(modifiedNames, ", "))
+		whereClause
 }
 
 func convertToSchema(values []bigquery.Value) (*Schema, error) {

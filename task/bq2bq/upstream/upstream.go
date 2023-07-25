@@ -8,6 +8,10 @@ type Upstream struct {
 func FlattenUpstreams(upstreams []*Upstream) []Resource {
 	var output []Resource
 	for _, u := range upstreams {
+		if u == nil {
+			continue
+		}
+
 		output = append(output, u.Resource)
 
 		nested := FlattenUpstreams(u.Upstreams)

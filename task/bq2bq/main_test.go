@@ -293,7 +293,7 @@ Select * from table where ts > "2021-01-16T00:00:00Z"`
 		})
 
 		t.Run("should generate unique dependencies for select statements", func(t *testing.T) {
-			expectedDeps := []string{"bigquery://proj:dataset.table1"}
+			expectedDeps := []string{"bigquery://proj:dataset.table1", "bigquery://proj:dataset.table2"}
 			query := "Select * from proj.dataset.table1 t1 join proj.dataset.table1 t2 on t1.col1 = t2.col1"
 			data := plugin.GenerateDependenciesRequest{
 				Assets: plugin.Assets{
@@ -337,6 +337,29 @@ Select * from table where ts > "2021-01-16T00:00:00Z"`
 			extractor := new(extractorMock)
 			extractor.On("ExtractUpstreams", mock.Anything, query, []upstream.Resource{destination}).
 				Return([]*upstream.Upstream{
+					{
+						Resource: upstream.Resource{
+							Project: "proj",
+							Dataset: "dataset",
+							Name:    "table1",
+						},
+						Upstreams: []*upstream.Upstream{
+							{
+								Resource: upstream.Resource{
+									Project: "proj",
+									Dataset: "dataset",
+									Name:    "table2",
+								},
+							},
+						},
+					},
+					{
+						Resource: upstream.Resource{
+							Project: "proj",
+							Dataset: "dataset",
+							Name:    "table2",
+						},
+					},
 					{
 						Resource: upstream.Resource{
 							Project: "proj",
