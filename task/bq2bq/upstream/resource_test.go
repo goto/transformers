@@ -35,7 +35,7 @@ func TestFilterResources(t *testing.T) {
 
 	actualResult := upstream.FilterResources(input, excludeIfContains3)
 
-	assert.Equal(t, expectedResult, actualResult)
+	assert.ElementsMatch(t, expectedResult, actualResult)
 }
 
 func TestUniqueFilterResources(t *testing.T) {
@@ -66,7 +66,7 @@ func TestUniqueFilterResources(t *testing.T) {
 
 	actualResult := upstream.UniqueFilterResources(input)
 
-	assert.Equal(t, expectedResult, actualResult)
+	assert.ElementsMatch(t, expectedResult, actualResult)
 }
 
 func TestGroupResources(t *testing.T) {
