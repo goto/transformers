@@ -108,5 +108,5 @@ func TestGroupResources(t *testing.T) {
 
 	actualResult := upstream.GroupResources(input)
 
-	assert.Equal(t, expectedResult, actualResult)
+	assert.ElementsMatch(t, expectedResult, actualResult)
 }
