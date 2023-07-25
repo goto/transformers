@@ -1,8 +1,8 @@
 #!/bin/bash
 # command : update_yaml_version.sh <src_file> <dst_file>
-# version comes from CI_COMMIT_TAG, otherwise, use latest
+# version comes from git describe --tags
 
-NEW_VERSION="${CI_COMMIT_TAG:=vlatest}"
+NEW_VERSION=$(git describe --tags)
 NEW_VERSION="${NEW_VERSION:1}" # remove v from v0.2.2
 SRC_FILE="$1"
 DST_FILE="$2"
