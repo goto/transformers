@@ -1,6 +1,5 @@
 before:
   hooks:
-    - make test
     - ./scripts/update_yaml_version.sh ./task/bq2bq/optimus-plugin-bq2bq.yaml ./distyaml/optimus-plugin-bq2bq.yaml
 
 builds:
