@@ -53,7 +53,7 @@ class BaseBigqueryService(ABC):
 
 class BigqueryService(BaseBigqueryService):
 
-    def __init__(self, client, labels, writer, on_job_finish = None, on_job_cancelled = None):
+    def __init__(self, client, labels, writer, on_job_finish = None, on_job_register = None):
         """
 
         :rtype:
@@ -62,7 +62,7 @@ class BigqueryService(BaseBigqueryService):
         self.labels = labels
         self.writer = writer
         self.on_job_finish = on_job_finish
-        self.on_job_cancelled = on_job_cancelled
+        self.on_job_register = on_job_register
 
     def execute_query(self, query):
         query_job_config = QueryJobConfig()
@@ -78,8 +78,8 @@ class BigqueryService(BaseBigqueryService):
         logger.info("Job {} is initially in state {} of {} project".format(query_job.job_id, query_job.state,
                                                                            query_job.project))
 
-        if self.on_job_cancelled:
-            self.on_job_cancelled(self.client, query_job)
+        if self.on_job_register:
+            self.on_job_register(self.client, query_job)
 
         try:
             result = query_job.result()
@@ -129,8 +129,8 @@ class BigqueryService(BaseBigqueryService):
         logger.info("Job {} is initially in state {} of {} project".format(query_job.job_id, query_job.state,
                                                                            query_job.project))
 
-        if self.on_job_cancelled:
-            self.on_job_cancelled(self.client, query_job)
+        if self.on_job_register:
+            self.on_job_register(self.client, query_job)
 
         try:
             result = query_job.result()
@@ -174,7 +174,7 @@ class BigqueryService(BaseBigqueryService):
         return self.client.get_table(table_ref)
 
 
-def create_bigquery_service(task_config: TaskConfigFromEnv, labels, writer, on_job_finish = None, on_job_cancelled = None):
+def create_bigquery_service(task_config: TaskConfigFromEnv, labels, writer, on_job_finish = None, on_job_register = None):
     if writer is None:
         writer = writer.StdWriter()
 
@@ -183,7 +183,7 @@ def create_bigquery_service(task_config: TaskConfigFromEnv, labels, writer, on_j
     default_query_job_config.priority = task_config.query_priority
     default_query_job_config.allow_field_addition = task_config.allow_field_addition
     client = bigquery.Client(project=task_config.execution_project, credentials=credentials, default_query_job_config=default_query_job_config)
-    return BigqueryService(client, labels, writer, on_job_finish=on_job_finish, on_job_cancelled=on_job_cancelled)
+    return BigqueryService(client, labels, writer, on_job_finish=on_job_finish, on_job_register=on_job_register)
 
 
 def _get_bigquery_credentials():
