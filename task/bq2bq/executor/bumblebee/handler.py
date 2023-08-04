@@ -29,7 +29,7 @@ class BigqueryJobHandler:
         self._sum_slot_millis += job.slot_millis
         self._sum_total_bytes_processed += job.total_bytes_processed
 
-    def handle_job_cancelled(self, client, job):
+    def register_job(self, client, job):
         self.client = client
         self.jobs.append(job)
 
