@@ -40,33 +40,78 @@ func TestReadSchemasUnderGroup(t *testing.T) {
 		assert.ErrorContains(t, actualError, unexpectedError.Error())
 	})
 
-	t.Run("should return nil and error if failed getting next value iterator", func(t *testing.T) {
-		client := new(ClientMock)
-		queryStatement := new(QueryMock)
-		rowIterator := new(RowIteratorMock)
+	t.Run("should return schema and error if failed getting next value iterator", func(t *testing.T) {
+		t.Run("should return nil schema if no other values available", func(t *testing.T) {
+			client := new(ClientMock)
+			queryStatement := new(QueryMock)
+			rowIterator := new(RowIteratorMock)
 
-		ctx := context.Background()
-		group := &upstream.ResourceGroup{
-			Project: "project_test",
-			Dataset: "dataset_test",
-			Names:   []string{"table_test"},
-		}
+			ctx := context.Background()
+			group := &upstream.ResourceGroup{
+				Project: "project_test",
+				Dataset: "dataset_test",
+				Names:   []string{"table_test"},
+			}
 
-		queryContent := buildQuery(group)
-		client.On("Query", queryContent).Return(queryStatement)
+			queryContent := buildQuery(group)
+			client.On("Query", queryContent).Return(queryStatement)
 
-		queryStatement.On("Read", ctx).Return(rowIterator, nil)
+			queryStatement.On("Read", ctx).Return(rowIterator, nil)
 
-		unexpectedError := errors.New("unexpected error")
-		rowIterator.On("Next", mock.Anything).Return(unexpectedError)
+			unexpectedError := errors.New("unexpected error")
+			rowIterator.On("Next", mock.Anything).Return(unexpectedError).Once()
+			rowIterator.On("Next", mock.Anything).Return(iterator.Done).Once()
 
-		actualSchemas, actualError := upstream.ReadSchemasUnderGroup(ctx, client, group)
+			actualSchemas, actualError := upstream.ReadSchemasUnderGroup(ctx, client, group)
 
-		assert.Nil(t, actualSchemas)
-		assert.ErrorContains(t, actualError, unexpectedError.Error())
+			assert.Nil(t, actualSchemas)
+			assert.ErrorContains(t, actualError, unexpectedError.Error())
+		})
+
+		t.Run("should return available schema if other values available", func(t *testing.T) {
+			client := new(ClientMock)
+			queryStatement := new(QueryMock)
+			rowIterator := new(RowIteratorMock)
+
+			ctx := context.Background()
+			group := &upstream.ResourceGroup{
+				Project: "project_test",
+				Dataset: "dataset_test",
+				Names:   []string{"table_test"},
+			}
+
+			queryContent := buildQuery(group)
+			client.On("Query", queryContent).Return(queryStatement)
+
+			queryStatement.On("Read", ctx).Return(rowIterator, nil)
+
+			unexpectedError := errors.New("unexpected error")
+			rowIterator.On("Next", mock.Anything).Return(unexpectedError).Once()
+			rowIterator.On("Next", mock.Anything).Run(func(args mock.Arguments) {
+				v := args.Get(0).(*[]bigquery.Value)
+				*v = []bigquery.Value{"project_test", "dataset_test", "table_test", "BASE TABLE", ""}
+			}).Return(nil).Once()
+			rowIterator.On("Next", mock.Anything).Return(iterator.Done).Once()
+
+			expectedSchemas := []*upstream.Schema{
+				{
+					Resource: upstream.Resource{
+						Project: "project_test",
+						Dataset: "dataset_test",
+						Name:    "table_test",
+					},
+					Type: upstream.BaseTable,
+				},
+			}
+
+			actualSchemas, actualError := upstream.ReadSchemasUnderGroup(ctx, client, group)
+
+			assert.EqualValues(t, expectedSchemas, actualSchemas)
+			assert.ErrorContains(t, actualError, unexpectedError.Error())
+		})
 	})
 
-	t.Run("should return nil and nil if row iterator results in zero value", func(t *testing.T) {
+	t.Run("should return schema and nil if row iterator results in zero value", func(t *testing.T) {
 		client := new(ClientMock)
 		queryStatement := new(QueryMock)
 		rowIterator := new(RowIteratorMock)
@@ -95,7 +140,7 @@ func TestReadSchemasUnderGroup(t *testing.T) {
 		assert.NoError(t, actualError)
 	})
 
-	t.Run("should return nil and error if row iterator cannot be converted to schema", func(t *testing.T) {
+	t.Run("should return schema and error if row iterator cannot be converted to schema", func(t *testing.T) {
 		testCases := []struct {
 			IteratorValues []bigquery.Value
 			ErrorMessage   string
@@ -146,13 +191,28 @@ func TestReadSchemasUnderGroup(t *testing.T) {
 
 			rowIterator.On("Next", mock.Anything).Run(func(args mock.Arguments) {
 				v := args.Get(0).(*[]bigquery.Value)
+				*v = []bigquery.Value{"project_test", "dataset_test", "table_test", "BASE TABLE", ""}
+			}).Return(nil).Once()
+			rowIterator.On("Next", mock.Anything).Run(func(args mock.Arguments) {
+				v := args.Get(0).(*[]bigquery.Value)
 				*v = test.IteratorValues
 			}).Return(nil).Once()
 			rowIterator.On("Next", mock.Anything).Return(iterator.Done).Once()
 
+			expectedSchemas := []*upstream.Schema{
+				{
+					Resource: upstream.Resource{
+						Project: "project_test",
+						Dataset: "dataset_test",
+						Name:    "table_test",
+					},
+					Type: upstream.BaseTable,
+				},
+			}
+
 			actualSchemas, actualError := upstream.ReadSchemasUnderGroup(ctx, client, group)
 
-			assert.Nil(t, actualSchemas)
+			assert.EqualValues(t, expectedSchemas, actualSchemas)
 			assert.ErrorContains(t, actualError, test.ErrorMessage)
 		}
 	})

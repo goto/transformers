@@ -53,10 +53,12 @@ func (e *Extractor) extractUpstreamsFromQuery(
 	resourceGroups := GroupResources(filteredUpstreamResources)
 
 	var output []*Upstream
+	var errorMessages []string
+
 	for _, group := range resourceGroups {
 		schemas, err := ReadSchemasUnderGroup(ctx, e.client, group)
 		if err != nil {
-			return nil, err
+			errorMessages = append(errorMessages, err.Error())
 		}
 
 		nestedable, rest := splitNestedableFromRest(schemas)
@@ -66,12 +68,15 @@ func (e *Extractor) extractUpstreamsFromQuery(
 
 		nestedNodes, err := e.extractNestedNodes(ctx, nestedable, ignoredResources, metResource)
 		if err != nil {
-			return nil, err
+			errorMessages = append(errorMessages, err.Error())
 		}
 
 		output = append(output, nestedNodes...)
 	}
 
+	if len(errorMessages) > 0 {
+		return output, fmt.Errorf("error reading upstream: [%s]", strings.Join(errorMessages, ", "))
+	}
 	return output, nil
 }
 
@@ -80,17 +85,19 @@ func (e *Extractor) extractNestedNodes(
 	ignoredResources, metResource map[Resource]bool,
 ) ([]*Upstream, error) {
 	var output []*Upstream
+	var errorMessages []string
 
 	for _, sch := range schemas {
 		if metResource[sch.Resource] {
-			msg := e.getCircularMessage(metResource)
-			return nil, fmt.Errorf("circular reference is detected: [%s]", msg)
+			msg := fmt.Sprintf("circular reference is detected: [%s]", e.getCircularURNs(metResource))
+			errorMessages = append(errorMessages, msg)
+			continue
 		}
 		metResource[sch.Resource] = true
 
 		nodes, err := e.getNodes(ctx, sch, ignoredResources, metResource)
 		if err != nil {
-			return nil, err
+			errorMessages = append(errorMessages, err.Error())
 		}
 
 		output = append(output, &Upstream{
@@ -99,6 +106,9 @@ func (e *Extractor) extractNestedNodes(
 		})
 	}
 
+	if len(errorMessages) > 0 {
+		return output, fmt.Errorf("error getting nested upstream: [%s]", strings.Join(errorMessages, ", "))
+	}
 	return output, nil
 }
 
@@ -117,18 +127,15 @@ func (e *Extractor) getNodes(
 	}
 
 	nodes, err := e.extractUpstreamsFromQuery(ctx, schema.DDL, ignoredResources, metResource, ParseNestedUpsreamsFromDDL)
-	if err != nil {
-		return nil, err
-	}
 
 	e.mutex.Lock()
 	e.schemaToUpstreams[key] = nodes
 	e.mutex.Unlock()
 
-	return nodes, nil
+	return nodes, err
 }
 
-func (*Extractor) getCircularMessage(metResource map[Resource]bool) string {
+func (*Extractor) getCircularURNs(metResource map[Resource]bool) string {
 	var urns []string
 	for resource := range metResource {
 		urns = append(urns, resource.URN())

@@ -288,7 +288,7 @@ func (b *BQ2BQ) extractUpstreams(ctx context.Context, query, svcAccSecret string
 				continue
 			}
 
-			return nil, fmt.Errorf("error extracting upstreams: %w", err)
+			b.logger.Error("error extracting upstreams", err)
 		}
 
 		return upstreams, nil

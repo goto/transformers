@@ -42,14 +42,17 @@ func ReadSchemasUnderGroup(ctx context.Context, client bqiface.Client, group *Re
 	}
 
 	var schemas []*Schema
+	var errorMessages []string
+
 	for {
 		var values []bigquery.Value
-		err := rowIterator.Next(&values)
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			return nil, err
+		if err := rowIterator.Next(&values); err != nil {
+			if errors.Is(err, iterator.Done) {
+				break
+			}
+
+			errorMessages = append(errorMessages, err.Error())
+			continue
 		}
 
 		if len(values) == 0 {
@@ -58,13 +61,18 @@ func ReadSchemasUnderGroup(ctx context.Context, client bqiface.Client, group *Re
 
 		sch, err := convertToSchema(values)
 		if err != nil {
-			return nil, err
+			errorMessages = append(errorMessages, err.Error())
+			continue
 		}
 
 		schemas = append(schemas, sch)
 	}
 
-	return schemas, nil
+	if len(errorMessages) > 0 {
+		err = fmt.Errorf("error encountered when reading reading schema: [%s]", strings.Join(errorMessages, ", "))
+	}
+
+	return schemas, err
 }
 
 func buildQuery(group *ResourceGroup) string {

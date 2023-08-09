@@ -230,9 +230,37 @@ func TestExtractor(t *testing.T) {
 			}).Return(nil).Once()
 			rowIterator.On("Next", mock.Anything).Return(iterator.Done).Once()
 
+			expectedUpstreams := []*upstream.Upstream{
+				{
+					Resource: upstream.Resource{
+						Project: "project_test_1",
+						Dataset: "dataset_test_1",
+						Name:    "cyclic_test_1",
+					},
+					Upstreams: []*upstream.Upstream{
+						{
+							Resource: upstream.Resource{
+								Project: "project_test_3",
+								Dataset: "dataset_test_3",
+								Name:    "cyclic_test_3",
+							},
+							Upstreams: []*upstream.Upstream{
+								{
+									Resource: upstream.Resource{
+										Project: "project_test_2",
+										Dataset: "dataset_test_2",
+										Name:    "cyclic_test_2",
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
 			actualUpstreams, actualError := extractor.ExtractUpstreams(ctx, queryRequest, resourcestoIgnore)
 
-			assert.Nil(t, actualUpstreams)
+			assert.EqualValues(t, expectedUpstreams, actualUpstreams)
 			assert.ErrorContains(t, actualError, "circular reference is detected")
 		})
 	})
