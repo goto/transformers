@@ -19,8 +19,9 @@ var (
 		"|" +
 		"(?i)(?:/\\*\\s*([a-zA-Z0-9@_-]*)\\s*\\*/)?\\s+`([\\w-]+)\\.([\\w-]+)\\.([\\w-]+)`\\s*(?:AS)?")
 
-	queryCommentPatterns = regexp.MustCompile("(--.*)|(((/\\*)+?[\\w\\W]*?(\\*/)+))")
-	helperPattern        = regexp.MustCompile("(\\/\\*\\s*(@[a-zA-Z0-9_-]+)\\s*\\*\\/)")
+	singleLineCommentsPattern = regexp.MustCompile(`(--.*)`)
+	multiLineCommentsPattern  = regexp.MustCompile(`(((/\*)+?[\w\W]*?(\*/)+))`)
+	specialCommentPattern     = regexp.MustCompile(`(\/\*\s*(@[a-zA-Z0-9_-]+)\s*\*\/)`)
 )
 
 func ParseTopLevelUpstreamsFromQuery(query string) []Resource {
@@ -91,18 +92,17 @@ func ParseTopLevelUpstreamsFromQuery(query string) []Resource {
 }
 
 func cleanQueryFromComment(query string) string {
-	matches := queryCommentPatterns.FindAllStringSubmatch(query, -1)
-	for _, match := range matches {
-		helperToken := match[2]
+	cleanedQuery := singleLineCommentsPattern.ReplaceAllString(query, "")
 
-		if helperPattern.MatchString(helperToken) {
+	matches := multiLineCommentsPattern.FindAllString(query, -1)
+	for _, match := range matches {
+		if specialCommentPattern.MatchString(match) {
 			continue
 		}
-
-		query = strings.ReplaceAll(query, match[0], " ")
+		cleanedQuery = strings.ReplaceAll(cleanedQuery, match, "")
 	}
 
-	return query
+	return cleanedQuery
 }
 
 // TODO: check if ddl requires custom query, if not then we can remove this function
