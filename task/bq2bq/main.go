@@ -6,16 +6,12 @@ import (
 	"flag"
 	"fmt"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/googleapis/google-cloud-go-testing/bigquery/bqiface"
 	oplugin "github.com/goto/optimus/plugin"
 	"github.com/goto/optimus/sdk/plugin"
 	"github.com/hashicorp/go-hclog"
-	"github.com/mitchellh/hashstructure/v2"
-	"github.com/patrickmn/go-cache"
-	"github.com/spf13/cast"
 
 	"github.com/goto/transformers/task/bq2bq/upstream"
 )
@@ -31,22 +27,12 @@ const (
 )
 
 var (
-	Name = "bq2bq"
-
-	// Version should be injected while building
+	Name    = "bq2bq"
 	Version = "dev"
 
-	QueryFileName = "query.sql"
-
+	QueryFileName    = "query.sql"
 	BqServiceAccount = "BQ_SERVICE_ACCOUNT"
-
-	TimeoutDuration = time.Second * 180
-	MaxBQApiRetries = 3
-	FakeSelectStmt  = "SELECT * from `%s` WHERE FALSE LIMIT 1"
-
-	CacheTTL         = time.Hour * 24
-	CacheCleanUp     = time.Hour * 6
-	ErrCacheNotFound = errors.New("item not found")
+	MaxBQApiRetries  = 3
 
 	LoadMethod        = "LOAD_METHOD"
 	LoadMethodReplace = "REPLACE"
@@ -71,8 +57,6 @@ type ExtractorFactory interface {
 type BQ2BQ struct {
 	ClientFac    ClientFactory
 	ExtractorFac ExtractorFactory
-	mu           sync.Mutex
-	C            *cache.Cache
 	Compiler     *Compiler
 
 	logger hclog.Logger
@@ -208,15 +192,6 @@ func (b *BQ2BQ) GenerateDependencies(ctx context.Context, request plugin.Generat
 	response = &plugin.GenerateDependenciesResponse{}
 	response.Dependencies = []string{}
 
-	// check if exists in cache
-	if cachedResponse, err := b.IsCached(request); err == nil {
-		// cache ready
-		span.AddEvent("Request found in cache")
-		return cachedResponse, nil
-	} else if err != ErrCacheNotFound {
-		return nil, err
-	}
-
 	var svcAcc string
 	accConfig, ok := request.Config.Get(BqServiceAccount)
 	if !ok || len(accConfig.Value) == 0 {
@@ -259,7 +234,6 @@ func (b *BQ2BQ) GenerateDependencies(ctx context.Context, request plugin.Generat
 
 	response.Dependencies = formattedUpstreams
 
-	b.Cache(request, response)
 	return response, nil
 }
 
@@ -325,38 +299,6 @@ func (b *BQ2BQ) formatUpstreams(upstreams []upstream.Resource, fn func(r upstrea
 	return output
 }
 
-func (b *BQ2BQ) IsCached(request plugin.GenerateDependenciesRequest) (*plugin.GenerateDependenciesResponse, error) {
-	if b.C == nil {
-		return nil, ErrCacheNotFound
-	}
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	requestHash, err := hashstructure.Hash(request, hashstructure.FormatV2, nil)
-	if err != nil {
-		return nil, err
-	}
-	hashString := cast.ToString(requestHash)
-	if item, ok := b.C.Get(hashString); ok {
-		return item.(*plugin.GenerateDependenciesResponse), nil
-	}
-	return nil, ErrCacheNotFound
-}
-
-func (b *BQ2BQ) Cache(request plugin.GenerateDependenciesRequest, response *plugin.GenerateDependenciesResponse) error {
-	if b.C == nil {
-		return nil
-	}
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	requestHash, err := hashstructure.Hash(request, hashstructure.FormatV2, nil)
-	if err != nil {
-		return err
-	}
-	hashString := cast.ToString(requestHash)
-	b.C.Set(hashString, response, cache.DefaultExpiration)
-	return nil
-}
-
 func main() {
 	var tracingAddr string
 	flag.StringVar(&tracingAddr, "t", "", "endpoint for traces collector")
@@ -374,7 +316,6 @@ func main() {
 		return &BQ2BQ{
 			ClientFac:    &DefaultBQClientFactory{},
 			ExtractorFac: &DefaultUpstreamExtractorFactory{},
-			C:            cache.New(CacheTTL, CacheCleanUp),
 			Compiler:     NewCompiler(),
 			logger:       log,
 		}
