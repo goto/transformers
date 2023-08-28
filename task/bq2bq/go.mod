@@ -9,9 +9,6 @@ require (
 	github.com/goto/optimus v0.8.1
 	github.com/goto/optimus/sdk v0.0.0-20230313071811-2d68a9c815bf
 	github.com/hashicorp/go-hclog v1.2.0
-	github.com/mitchellh/hashstructure/v2 v2.0.2
-	github.com/patrickmn/go-cache v2.1.0+incompatible
-	github.com/spf13/cast v1.4.1
 	github.com/stretchr/testify v1.8.1
 	go.opentelemetry.io/otel v1.7.0
 	go.opentelemetry.io/otel/exporters/jaeger v1.0.1
@@ -69,6 +66,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/spf13/afero v1.9.2 // indirect
+	github.com/spf13/cast v1.4.1 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.8.1 // indirect

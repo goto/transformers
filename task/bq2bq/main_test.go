@@ -9,7 +9,6 @@ import (
 
 	"github.com/googleapis/google-cloud-go-testing/bigquery/bqiface"
 	"github.com/goto/optimus/sdk/plugin"
-	"github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
@@ -583,7 +582,6 @@ Select * from table where ts > "2021-01-16T00:00:00Z"`
 			b := &BQ2BQ{
 				ClientFac:    bqClientFac,
 				ExtractorFac: extractorFac,
-				C:            cache.New(CacheTTL, CacheCleanUp),
 			}
 			got, err := b.GenerateDependencies(ctx, data)
 			if err != nil {
