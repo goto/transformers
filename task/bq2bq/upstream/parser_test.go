@@ -358,6 +358,60 @@ func TestParseTopLevelUpstreamsFromQuery(t *testing.T) {
 					},
 				},
 			},
+			{
+				Name: "ignore characters after -- comment",
+				InputQuery: `
+				-- sources
+				-- data-engineering.testing.table_a
+				--
+				-- related
+				-- ` + "`data-engineering.testing.table_b`" + `
+				-- from data-engineering.testing.table_c
+
+				select *
+				from data-engineering.testing.table_a
+				join /* @ignoreupstream */ data-engineering.testing.table_d
+				`,
+				ExpectedSources: []upstream.Resource{
+					{
+						Project: "data-engineering",
+						Dataset: "testing",
+						Name:    "table_a",
+					},
+				},
+			},
+			{
+				Name: "ignore characters within multi-line comment /* (separate line) */",
+				InputQuery: `
+				/*
+				this the following relates to this table:
+
+					with ` + "`data-engineering.testing.tabel_b`" + `
+					from data-engineering.testing.tabel_c
+				*/
+
+
+				select *
+				from
+					data-engineering.testing.table_a
+				join
+					data-engineering.testing.table_d
+				join
+					/* @ignoreupstream */ data-engineering.testing.table_e
+				`,
+				ExpectedSources: []upstream.Resource{
+					{
+						Project: "data-engineering",
+						Dataset: "testing",
+						Name:    "table_a",
+					},
+					{
+						Project: "data-engineering",
+						Dataset: "testing",
+						Name:    "table_d",
+					},
+				},
+			},
 		}
 
 		for _, test := range testCases {
