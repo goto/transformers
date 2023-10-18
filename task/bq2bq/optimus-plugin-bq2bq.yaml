@@ -2,6 +2,10 @@ name: bq2bq
 description: BigQuery to BigQuery transformation task
 plugintype: task
 pluginversion: {{.version}}
+asset_parsers:
+  bq:
+  - filepath: "./query.sql"
+destination_urn_template: "bigquery://<PROJECT>:<DATASET>.<TABLE>"
 image: docker.io/gotocompany/optimus-task-bq2bq-executor:{{.version}}
 entrypoint:
   script: "python3 /opt/bumblebee/main.py"
