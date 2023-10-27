@@ -77,7 +77,7 @@ func (e *Extractor) getUpstreamsFromGroup(
 	var errorMessages []string
 
 	schemas, err := ReadSchemasUnderGroup(ctx, e.client, group)
-	if err != nil {
+	if err != nil && !e.isIgnorableError(err) {
 		errorMessages = append(errorMessages, err.Error())
 	}
 
@@ -159,4 +159,9 @@ func (*Extractor) getCircularURNs(encounteredResources map[Resource]bool) string
 	}
 
 	return strings.Join(urns, ", ")
+}
+
+func (*Extractor) isIgnorableError(err error) bool {
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "access denied") || strings.Contains(msg, "user does not have permission")
 }

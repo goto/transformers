@@ -2,6 +2,7 @@ package upstream_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"cloud.google.com/go/bigquery"
@@ -169,6 +170,78 @@ func TestExtractor(t *testing.T) {
 					Project: "project_test_3",
 					Dataset: "dataset_test_3",
 					Name:    "name_test_3",
+				},
+			}
+
+			actualUpstreams, actualError := extractor.ExtractUpstreams(ctx, queryRequest, resourcestoIgnore)
+
+			assert.ElementsMatch(t, expectedUpstreams, actualUpstreams)
+			assert.NoError(t, actualError)
+		})
+
+		t.Run("should return upstreams and nil if error being encountered is related to access denied", func(t *testing.T) {
+			client := new(ClientMock)
+			query := new(QueryMock)
+			resourcestoIgnore := []upstream.Resource{
+				{
+					Project: "project_test_0",
+					Dataset: "dataset_test_0",
+					Name:    "name_test_0",
+				},
+			}
+
+			extractor, err := upstream.NewExtractor(client)
+			assert.NotNil(t, extractor)
+			assert.NoError(t, err)
+
+			ctx := context.Background()
+			queryRequest := "select * from `project_test_1.dataset_test_1.name_test_1`"
+
+			client.On("Query", mock.Anything).Return(query)
+
+			query.On("Read", mock.Anything).Return(nil, errors.New("Access Denied"))
+
+			expectedUpstreams := []upstream.Resource{
+				{
+					Project: "project_test_1",
+					Dataset: "dataset_test_1",
+					Name:    "name_test_1",
+				},
+			}
+
+			actualUpstreams, actualError := extractor.ExtractUpstreams(ctx, queryRequest, resourcestoIgnore)
+
+			assert.ElementsMatch(t, expectedUpstreams, actualUpstreams)
+			assert.NoError(t, actualError)
+		})
+
+		t.Run("should return upstreams and nil if error being encountered is related to user does not have permission", func(t *testing.T) {
+			client := new(ClientMock)
+			query := new(QueryMock)
+			resourcestoIgnore := []upstream.Resource{
+				{
+					Project: "project_test_0",
+					Dataset: "dataset_test_0",
+					Name:    "name_test_0",
+				},
+			}
+
+			extractor, err := upstream.NewExtractor(client)
+			assert.NotNil(t, extractor)
+			assert.NoError(t, err)
+
+			ctx := context.Background()
+			queryRequest := "select * from `project_test_1.dataset_test_1.name_test_1`"
+
+			client.On("Query", mock.Anything).Return(query)
+
+			query.On("Read", mock.Anything).Return(nil, errors.New("User does not have permission"))
+
+			expectedUpstreams := []upstream.Resource{
+				{
+					Project: "project_test_1",
+					Dataset: "dataset_test_1",
+					Name:    "name_test_1",
 				},
 			}
 

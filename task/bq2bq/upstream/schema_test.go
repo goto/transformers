@@ -217,52 +217,6 @@ func TestReadSchemasUnderGroup(t *testing.T) {
 		}
 	})
 
-	t.Run("should return nil and nil if error related to denied access is encountered", func(t *testing.T) {
-		client := new(ClientMock)
-		queryStatement := new(QueryMock)
-		rowIterator := new(RowIteratorMock)
-
-		ctx := context.Background()
-		group := &upstream.ResourceGroup{
-			Project: "project_test",
-			Dataset: "dataset_test",
-			Names:   []string{"table_test", "table_wild*"},
-		}
-
-		queryContent := buildQuery(group)
-		client.On("Query", queryContent).Return(queryStatement)
-
-		queryStatement.On("Read", ctx).Return(rowIterator, errors.New("access denied"))
-
-		actualSchemas, actualError := upstream.ReadSchemasUnderGroup(ctx, client, group)
-
-		assert.Nil(t, actualSchemas)
-		assert.NoError(t, actualError)
-	})
-
-	t.Run("should return nil and nil if error related to limited permission is encountered", func(t *testing.T) {
-		client := new(ClientMock)
-		queryStatement := new(QueryMock)
-		rowIterator := new(RowIteratorMock)
-
-		ctx := context.Background()
-		group := &upstream.ResourceGroup{
-			Project: "project_test",
-			Dataset: "dataset_test",
-			Names:   []string{"table_test", "table_wild*"},
-		}
-
-		queryContent := buildQuery(group)
-		client.On("Query", queryContent).Return(queryStatement)
-
-		queryStatement.On("Read", ctx).Return(rowIterator, errors.New("user does not have permission"))
-
-		actualSchemas, actualError := upstream.ReadSchemasUnderGroup(ctx, client, group)
-
-		assert.Nil(t, actualSchemas)
-		assert.NoError(t, actualError)
-	})
-
 	t.Run("should return schemas and nil if no error is encountered", func(t *testing.T) {
 		client := new(ClientMock)
 		queryStatement := new(QueryMock)
