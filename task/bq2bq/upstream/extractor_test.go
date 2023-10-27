@@ -7,6 +7,7 @@ import (
 
 	"cloud.google.com/go/bigquery"
 	"github.com/googleapis/google-cloud-go-testing/bigquery/bqiface"
+	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"google.golang.org/api/iterator"
@@ -17,17 +18,29 @@ import (
 func TestNewExtractor(t *testing.T) {
 	t.Run("should return nil and error if client is nil", func(t *testing.T) {
 		var client bqiface.Client
+		logger := hclog.NewNullLogger()
 
-		actualExtractor, actualError := upstream.NewExtractor(client)
+		actualExtractor, actualError := upstream.NewExtractor(client, logger)
 
 		assert.Nil(t, actualExtractor)
 		assert.EqualError(t, actualError, "client is nil")
 	})
 
+	t.Run("should return nil and error if logger is nil", func(t *testing.T) {
+		client := new(ClientMock)
+		var logger hclog.Logger
+
+		actualExtractor, actualError := upstream.NewExtractor(client, logger)
+
+		assert.Nil(t, actualExtractor)
+		assert.EqualError(t, actualError, "logger is nil")
+	})
+
 	t.Run("should return extractor and nil if no error is encountered", func(t *testing.T) {
 		client := new(ClientMock)
+		logger := hclog.NewNullLogger()
 
-		actualExtractor, actualError := upstream.NewExtractor(client)
+		actualExtractor, actualError := upstream.NewExtractor(client, logger)
 
 		assert.NotNil(t, actualExtractor)
 		assert.NoError(t, actualError)
@@ -35,6 +48,8 @@ func TestNewExtractor(t *testing.T) {
 }
 
 func TestExtractor(t *testing.T) {
+	logger := hclog.NewNullLogger()
+
 	t.Run("ExtractUpstreams", func(t *testing.T) {
 		t.Run("should pass the existing spec", func(t *testing.T) {
 			testCases := []struct {
@@ -94,7 +109,7 @@ func TestExtractor(t *testing.T) {
 					},
 				}
 
-				extractor, err := upstream.NewExtractor(client)
+				extractor, err := upstream.NewExtractor(client, logger)
 				assert.NotNil(t, extractor)
 				assert.NoError(t, err)
 
@@ -129,7 +144,7 @@ func TestExtractor(t *testing.T) {
 				},
 			}
 
-			extractor, err := upstream.NewExtractor(client)
+			extractor, err := upstream.NewExtractor(client, logger)
 			assert.NotNil(t, extractor)
 			assert.NoError(t, err)
 
@@ -190,7 +205,7 @@ func TestExtractor(t *testing.T) {
 				},
 			}
 
-			extractor, err := upstream.NewExtractor(client)
+			extractor, err := upstream.NewExtractor(client, logger)
 			assert.NotNil(t, extractor)
 			assert.NoError(t, err)
 
@@ -226,7 +241,7 @@ func TestExtractor(t *testing.T) {
 				},
 			}
 
-			extractor, err := upstream.NewExtractor(client)
+			extractor, err := upstream.NewExtractor(client, logger)
 			assert.NotNil(t, extractor)
 			assert.NoError(t, err)
 
@@ -257,7 +272,7 @@ func TestExtractor(t *testing.T) {
 			rowIterator := new(RowIteratorMock)
 			resourcestoIgnore := []upstream.Resource{}
 
-			extractor, err := upstream.NewExtractor(client)
+			extractor, err := upstream.NewExtractor(client, logger)
 			assert.NotNil(t, extractor)
 			assert.NoError(t, err)
 

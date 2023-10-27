@@ -9,6 +9,7 @@ import (
 
 	"github.com/googleapis/google-cloud-go-testing/bigquery/bqiface"
 	"github.com/goto/optimus/sdk/plugin"
+	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
@@ -33,8 +34,8 @@ type extractorFactoryMock struct {
 	mock.Mock
 }
 
-func (e *extractorFactoryMock) New(client bqiface.Client) (UpstreamExtractor, error) {
-	args := e.Called(client)
+func (e *extractorFactoryMock) New(client bqiface.Client, logger hclog.Logger) (UpstreamExtractor, error) {
+	args := e.Called(client, logger)
 
 	r1, ok := args.Get(0).(UpstreamExtractor)
 	if !ok {
@@ -61,6 +62,7 @@ func (e *extractorMock) ExtractUpstreams(ctx context.Context, query string, reso
 
 func TestBQ2BQ(t *testing.T) {
 	ctx := context.Background()
+	logger := hclog.NewNullLogger()
 
 	t.Run("GetName", func(t *testing.T) {
 		t.Run("should return name bq2bq", func(t *testing.T) {
@@ -272,11 +274,12 @@ Select * from table where ts > "2021-01-16T00:00:00Z"`
 				}, nil)
 
 			extractorFac := new(extractorFactoryMock)
-			extractorFac.On("New", client).Return(extractor, nil)
+			extractorFac.On("New", client, logger).Return(extractor, nil)
 
 			b := &BQ2BQ{
 				ClientFac:    bqClientFac,
 				ExtractorFac: extractorFac,
+				logger:       logger,
 			}
 			got, err := b.GenerateDependencies(ctx, data)
 			if err != nil {
@@ -347,11 +350,12 @@ Select * from table where ts > "2021-01-16T00:00:00Z"`
 				}, nil)
 
 			extractorFac := new(extractorFactoryMock)
-			extractorFac.On("New", client).Return(extractor, nil)
+			extractorFac.On("New", client, logger).Return(extractor, nil)
 
 			b := &BQ2BQ{
 				ClientFac:    bqClientFac,
 				ExtractorFac: extractorFac,
+				logger:       logger,
 			}
 			got, err := b.GenerateDependencies(ctx, data)
 			if err != nil {
@@ -411,11 +415,12 @@ Select * from table where ts > "2021-01-16T00:00:00Z"`
 				Return([]upstream.Resource{}, nil)
 
 			extractorFac := new(extractorFactoryMock)
-			extractorFac.On("New", client).Return(extractor, nil)
+			extractorFac.On("New", client, logger).Return(extractor, nil)
 
 			b := &BQ2BQ{
 				ClientFac:    bqClientFac,
 				ExtractorFac: extractorFac,
+				logger:       logger,
 			}
 			got, err := b.GenerateDependencies(ctx, data)
 			if err != nil {
@@ -481,11 +486,12 @@ Select * from table where ts > "2021-01-16T00:00:00Z"`
 				}, nil)
 
 			extractorFac := new(extractorFactoryMock)
-			extractorFac.On("New", client).Return(extractor, nil)
+			extractorFac.On("New", client, logger).Return(extractor, nil)
 
 			b := &BQ2BQ{
 				ClientFac:    bqClientFac,
 				ExtractorFac: extractorFac,
+				logger:       logger,
 			}
 			got, err := b.GenerateDependencies(ctx, data)
 			if err != nil {
@@ -551,11 +557,12 @@ Select * from table where ts > "2021-01-16T00:00:00Z"`
 				}, nil)
 
 			extractorFac := new(extractorFactoryMock)
-			extractorFac.On("New", client).Return(extractor, nil)
+			extractorFac.On("New", client, logger).Return(extractor, nil)
 
 			b := &BQ2BQ{
 				ClientFac:    bqClientFac,
 				ExtractorFac: extractorFac,
+				logger:       logger,
 			}
 			got, err := b.GenerateDependencies(ctx, data)
 			if err != nil {

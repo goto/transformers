@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/googleapis/google-cloud-go-testing/bigquery/bqiface"
+	"github.com/hashicorp/go-hclog"
 )
 
 type Extractor struct {
@@ -15,17 +16,23 @@ type Extractor struct {
 	client bqiface.Client
 
 	urnToUpstreams map[string][]Resource
+	logger         hclog.Logger
 }
 
-func NewExtractor(client bqiface.Client) (*Extractor, error) {
+func NewExtractor(client bqiface.Client, logger hclog.Logger) (*Extractor, error) {
 	if client == nil {
 		return nil, errors.New("client is nil")
+	}
+
+	if logger == nil {
+		return nil, errors.New("logger is nil")
 	}
 
 	return &Extractor{
 		mutex:          &sync.Mutex{},
 		client:         client,
 		urnToUpstreams: make(map[string][]Resource),
+		logger:         logger,
 	}, nil
 }
 
@@ -77,8 +84,12 @@ func (e *Extractor) getUpstreamsFromGroup(
 	var errorMessages []string
 
 	schemas, err := ReadSchemasUnderGroup(ctx, e.client, group)
-	if err != nil && !e.isIgnorableError(err) {
-		errorMessages = append(errorMessages, err.Error())
+	if err != nil {
+		if e.isIgnorableError(err) {
+			e.logger.Error("ignoring error when reading schema for [%s.%s]: %v", group.Project, group.Dataset, err)
+		} else {
+			errorMessages = append(errorMessages, err.Error())
+		}
 	}
 
 	nestedable, unnestedable := splitNestedableFromRest(schemas)

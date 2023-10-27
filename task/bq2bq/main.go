@@ -51,7 +51,7 @@ type UpstreamExtractor interface {
 }
 
 type ExtractorFactory interface {
-	New(client bqiface.Client) (UpstreamExtractor, error)
+	New(client bqiface.Client, logger hclog.Logger) (UpstreamExtractor, error)
 }
 
 type BQ2BQ struct {
@@ -244,7 +244,7 @@ func (b *BQ2BQ) extractUpstreams(ctx context.Context, query, svcAccSecret string
 			return nil, fmt.Errorf("error creating bigquery client: %w", err)
 		}
 
-		extractor, err := b.ExtractorFac.New(client)
+		extractor, err := b.ExtractorFac.New(client, b.logger)
 		if err != nil {
 			return nil, fmt.Errorf("error initializing upstream extractor: %w", err)
 		}
@@ -260,6 +260,7 @@ func (b *BQ2BQ) extractUpstreams(ctx context.Context, query, svcAccSecret string
 			}
 
 			b.logger.Error("error extracting upstreams", err)
+			return nil, err
 		}
 
 		return upstreams, nil
