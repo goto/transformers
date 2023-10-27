@@ -53,22 +53,12 @@ func (e *Extractor) extractUpstreamsFromQuery(
 
 	resourceGroups := GroupResources(filteredResources)
 	for _, group := range resourceGroups {
-		schemas, err := ReadSchemasUnderGroup(ctx, e.client, group)
+		result, err := e.getUpstreamsFromGroup(ctx, group, ignoredResources, encounteredResources)
 		if err != nil {
 			errorMessages = append(errorMessages, err.Error())
 		}
 
-		nestedable, unnestedable := splitNestedableFromRest(schemas)
-
-		unnestedableResources := convertSchemasToResources(unnestedable)
-		output = append(output, unnestedableResources...)
-
-		nestedResources, err := e.extractNestedableUpstreams(ctx, nestedable, ignoredResources, encounteredResources)
-		if err != nil {
-			errorMessages = append(errorMessages, err.Error())
-		}
-
-		output = append(output, nestedResources...)
+		output = append(output, result...)
 	}
 
 	output = UniqueFilterResources(output)
@@ -76,6 +66,36 @@ func (e *Extractor) extractUpstreamsFromQuery(
 	if len(errorMessages) > 0 {
 		return output, fmt.Errorf("error reading upstream: [%s]", strings.Join(errorMessages, ", "))
 	}
+	return output, nil
+}
+
+func (e *Extractor) getUpstreamsFromGroup(
+	ctx context.Context, group *ResourceGroup,
+	ignoredResources, encounteredResources map[Resource]bool,
+) ([]Resource, error) {
+	var output []Resource
+	var errorMessages []string
+
+	schemas, err := ReadSchemasUnderGroup(ctx, e.client, group)
+	if err != nil {
+		errorMessages = append(errorMessages, err.Error())
+	}
+
+	nestedable, unnestedable := splitNestedableFromRest(schemas)
+
+	unnestedableResources := convertSchemasToResources(unnestedable)
+	output = append(output, unnestedableResources...)
+
+	nestedResources, err := e.extractNestedableUpstreams(ctx, nestedable, ignoredResources, encounteredResources)
+	if err != nil {
+		errorMessages = append(errorMessages, err.Error())
+	}
+
+	output = append(output, nestedResources...)
+	if len(errorMessages) > 0 {
+		return output, fmt.Errorf("error getting upstream for [%s.%s]: %s", group.Project, group.Dataset, strings.Join(errorMessages, ", "))
+	}
+
 	return output, nil
 }
 
