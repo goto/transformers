@@ -48,10 +48,10 @@ type extractorMock struct {
 	mock.Mock
 }
 
-func (e *extractorMock) ExtractUpstreams(ctx context.Context, query string, resourcesToIgnore []upstream.Resource) ([]*upstream.Upstream, error) {
+func (e *extractorMock) ExtractUpstreams(ctx context.Context, query string, resourcesToIgnore []upstream.Resource) ([]upstream.Resource, error) {
 	args := e.Called(ctx, query, resourcesToIgnore)
 
-	r1, ok := args.Get(0).([]*upstream.Upstream)
+	r1, ok := args.Get(0).([]upstream.Resource)
 	if !ok {
 		return nil, args.Error(1)
 	}
@@ -263,13 +263,11 @@ Select * from table where ts > "2021-01-16T00:00:00Z"`
 
 			extractor := new(extractorMock)
 			extractor.On("ExtractUpstreams", mock.Anything, query, []upstream.Resource{destination}).
-				Return([]*upstream.Upstream{
+				Return([]upstream.Resource{
 					{
-						Resource: upstream.Resource{
-							Project: "proj",
-							Dataset: "dataset",
-							Name:    "table1",
-						},
+						Project: "proj",
+						Dataset: "dataset",
+						Name:    "table1",
 					},
 				}, nil)
 
@@ -335,36 +333,16 @@ Select * from table where ts > "2021-01-16T00:00:00Z"`
 
 			extractor := new(extractorMock)
 			extractor.On("ExtractUpstreams", mock.Anything, query, []upstream.Resource{destination}).
-				Return([]*upstream.Upstream{
+				Return([]upstream.Resource{
 					{
-						Resource: upstream.Resource{
-							Project: "proj",
-							Dataset: "dataset",
-							Name:    "table1",
-						},
-						Upstreams: []*upstream.Upstream{
-							{
-								Resource: upstream.Resource{
-									Project: "proj",
-									Dataset: "dataset",
-									Name:    "table2",
-								},
-							},
-						},
+						Project: "proj",
+						Dataset: "dataset",
+						Name:    "table1",
 					},
 					{
-						Resource: upstream.Resource{
-							Project: "proj",
-							Dataset: "dataset",
-							Name:    "table2",
-						},
-					},
-					{
-						Resource: upstream.Resource{
-							Project: "proj",
-							Dataset: "dataset",
-							Name:    "table1",
-						},
+						Project: "proj",
+						Dataset: "dataset",
+						Name:    "table2",
 					},
 				}, nil)
 
@@ -430,7 +408,7 @@ Select * from table where ts > "2021-01-16T00:00:00Z"`
 
 			extractor := new(extractorMock)
 			extractor.On("ExtractUpstreams", mock.Anything, query, []upstream.Resource{destination}).
-				Return([]*upstream.Upstream{}, nil)
+				Return([]upstream.Resource{}, nil)
 
 			extractorFac := new(extractorFactoryMock)
 			extractorFac.On("New", client).Return(extractor, nil)
@@ -494,13 +472,11 @@ Select * from table where ts > "2021-01-16T00:00:00Z"`
 
 			extractor := new(extractorMock)
 			extractor.On("ExtractUpstreams", mock.Anything, query, []upstream.Resource{destination}).
-				Return([]*upstream.Upstream{
+				Return([]upstream.Resource{
 					{
-						Resource: upstream.Resource{
-							Project: "proj",
-							Dataset: "dataset",
-							Name:    "table1",
-						},
+						Project: "proj",
+						Dataset: "dataset",
+						Name:    "table1",
 					},
 				}, nil)
 
@@ -566,13 +542,11 @@ Select * from table where ts > "2021-01-16T00:00:00Z"`
 
 			extractor := new(extractorMock)
 			extractor.On("ExtractUpstreams", mock.Anything, query, []upstream.Resource{destination}).
-				Return([]*upstream.Upstream{
+				Return([]upstream.Resource{
 					{
-						Resource: upstream.Resource{
-							Project: "proj",
-							Dataset: "dataset",
-							Name:    "table1",
-						},
+						Project: "proj",
+						Dataset: "dataset",
+						Name:    "table1",
 					},
 				}, nil)
 

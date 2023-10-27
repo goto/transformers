@@ -14,7 +14,7 @@ type Extractor struct {
 	mutex  *sync.Mutex
 	client bqiface.Client
 
-	urnToUpstreams map[string][]*Upstream
+	urnToUpstreams map[string][]Resource
 }
 
 func NewExtractor(client bqiface.Client) (*Extractor, error) {
@@ -25,11 +25,11 @@ func NewExtractor(client bqiface.Client) (*Extractor, error) {
 	return &Extractor{
 		mutex:          &sync.Mutex{},
 		client:         client,
-		urnToUpstreams: make(map[string][]*Upstream),
+		urnToUpstreams: make(map[string][]Resource),
 	}, nil
 }
 
-func (e *Extractor) ExtractUpstreams(ctx context.Context, query string, resourcesToIgnore []Resource) ([]*Upstream, error) {
+func (e *Extractor) ExtractUpstreams(ctx context.Context, query string, resourcesToIgnore []Resource) ([]Resource, error) {
 	ignoredResources := make(map[Resource]bool)
 	for _, r := range resourcesToIgnore {
 		ignoredResources[r] = true
@@ -43,18 +43,15 @@ func (e *Extractor) extractUpstreamsFromQuery(
 	ctx context.Context, query string,
 	ignoredResources, encounteredResources map[Resource]bool,
 	parseFn QueryParser,
-) ([]*Upstream, error) {
+) ([]Resource, error) {
 	resources := parseFn(query)
-
 	uniqueResources := UniqueFilterResources(resources)
-
 	filteredResources := FilterResources(uniqueResources, func(r Resource) bool { return ignoredResources[r] })
 
-	resourceGroups := GroupResources(filteredResources)
-
-	var output []*Upstream
+	output := filteredResources
 	var errorMessages []string
 
+	resourceGroups := GroupResources(filteredResources)
 	for _, group := range resourceGroups {
 		schemas, err := ReadSchemasUnderGroup(ctx, e.client, group)
 		if err != nil {
@@ -63,16 +60,18 @@ func (e *Extractor) extractUpstreamsFromQuery(
 
 		nestedable, unnestedable := splitNestedableFromRest(schemas)
 
-		unnestedableUpstreams := convertSchemasToUpstreams(unnestedable)
-		output = append(output, unnestedableUpstreams...)
+		unnestedableResources := convertSchemasToResources(unnestedable)
+		output = append(output, unnestedableResources...)
 
-		nestedUpstreams, err := e.extractNestedableUpstreams(ctx, nestedable, ignoredResources, encounteredResources)
+		nestedResources, err := e.extractNestedableUpstreams(ctx, nestedable, ignoredResources, encounteredResources)
 		if err != nil {
 			errorMessages = append(errorMessages, err.Error())
 		}
 
-		output = append(output, nestedUpstreams...)
+		output = append(output, nestedResources...)
 	}
+
+	output = UniqueFilterResources(output)
 
 	if len(errorMessages) > 0 {
 		return output, fmt.Errorf("error reading upstream: [%s]", strings.Join(errorMessages, ", "))
@@ -83,8 +82,8 @@ func (e *Extractor) extractUpstreamsFromQuery(
 func (e *Extractor) extractNestedableUpstreams(
 	ctx context.Context, schemas []*Schema,
 	ignoredResources, encounteredResources map[Resource]bool,
-) ([]*Upstream, error) {
-	var output []*Upstream
+) ([]Resource, error) {
+	var output []Resource
 	var errorMessages []string
 
 	for _, sch := range schemas {
@@ -100,10 +99,8 @@ func (e *Extractor) extractNestedableUpstreams(
 			errorMessages = append(errorMessages, err.Error())
 		}
 
-		output = append(output, &Upstream{
-			Resource:  sch.Resource,
-			Upstreams: upstreams,
-		})
+		output = append(output, sch.Resource)
+		output = append(output, upstreams...)
 	}
 
 	if len(errorMessages) > 0 {
@@ -115,11 +112,11 @@ func (e *Extractor) extractNestedableUpstreams(
 func (e *Extractor) getUpstreams(
 	ctx context.Context, schema *Schema,
 	ignoredResources, encounteredResources map[Resource]bool,
-) ([]*Upstream, error) {
-	key := schema.Resource.URN()
+) ([]Resource, error) {
+	urn := schema.Resource.URN()
 
 	e.mutex.Lock()
-	existingUpstreams, ok := e.urnToUpstreams[key]
+	existingUpstreams, ok := e.urnToUpstreams[urn]
 	e.mutex.Unlock()
 
 	if ok {
@@ -129,7 +126,7 @@ func (e *Extractor) getUpstreams(
 	upstreams, err := e.extractUpstreamsFromQuery(ctx, schema.DDL, ignoredResources, encounteredResources, ParseNestedUpsreamsFromDDL)
 
 	e.mutex.Lock()
-	e.urnToUpstreams[key] = upstreams
+	e.urnToUpstreams[urn] = upstreams
 	e.mutex.Unlock()
 
 	return upstreams, err
