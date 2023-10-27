@@ -2,6 +2,7 @@ package upstream_test
 
 import (
 	"context"
+	"sort"
 	"testing"
 
 	"cloud.google.com/go/bigquery"
@@ -34,6 +35,15 @@ func TestNewExtractor(t *testing.T) {
 }
 
 func TestExtractor(t *testing.T) {
+	sortResources := func(resources []upstream.Resource) {
+		sort.Slice(resources, func(i, j int) bool {
+			iResource := resources[i]
+			jResource := resources[j]
+
+			return iResource.URN() < jResource.URN()
+		})
+	}
+
 	t.Run("ExtractUpstreams", func(t *testing.T) {
 		t.Run("should pass the existing spec", func(t *testing.T) {
 			testCases := []struct {
@@ -174,6 +184,8 @@ func TestExtractor(t *testing.T) {
 
 			actualUpstreams, actualError := extractor.ExtractUpstreams(ctx, queryRequest, resourcestoIgnore)
 
+			sortResources(actualUpstreams)
+
 			assert.EqualValues(t, expectedUpstreams, actualUpstreams)
 			assert.NoError(t, actualError)
 		})
@@ -224,18 +236,20 @@ func TestExtractor(t *testing.T) {
 					Name:    "cyclic_test_1",
 				},
 				{
-					Project: "project_test_3",
-					Dataset: "dataset_test_3",
-					Name:    "cyclic_test_3",
-				},
-				{
 					Project: "project_test_2",
 					Dataset: "dataset_test_2",
 					Name:    "cyclic_test_2",
 				},
+				{
+					Project: "project_test_3",
+					Dataset: "dataset_test_3",
+					Name:    "cyclic_test_3",
+				},
 			}
 
 			actualUpstreams, actualError := extractor.ExtractUpstreams(ctx, queryRequest, resourcestoIgnore)
+
+			sortResources(actualUpstreams)
 
 			assert.EqualValues(t, expectedUpstreams, actualUpstreams)
 			assert.ErrorContains(t, actualError, "circular reference is detected")
