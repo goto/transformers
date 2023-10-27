@@ -38,6 +38,10 @@ func ReadSchemasUnderGroup(ctx context.Context, client bqiface.Client, group *Re
 
 	rowIterator, err := queryStatement.Read(ctx)
 	if err != nil {
+		if isIgnorableError(err) {
+			return nil, nil
+		}
+
 		return nil, err
 	}
 
@@ -73,6 +77,11 @@ func ReadSchemasUnderGroup(ctx context.Context, client bqiface.Client, group *Re
 	}
 
 	return schemas, err
+}
+
+func isIgnorableError(err error) bool {
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "access denied") || strings.Contains(msg, "user does not have permission")
 }
 
 func buildQuery(group *ResourceGroup) string {
