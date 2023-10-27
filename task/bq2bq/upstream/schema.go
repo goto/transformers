@@ -179,7 +179,7 @@ func splitNestedableFromRest(schemas []*Schema) (nestedable, rests []*Schema) {
 	return nestedable, rests
 }
 
-func convertSchemasToNodes(schemas []*Schema) []*Upstream {
+func convertSchemasToUpstreams(schemas []*Schema) []*Upstream {
 	output := make([]*Upstream, len(schemas))
 	for i, sch := range schemas {
 		output[i] = &Upstream{
