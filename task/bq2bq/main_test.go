@@ -9,6 +9,7 @@ import (
 
 	"github.com/googleapis/google-cloud-go-testing/bigquery/bqiface"
 	"github.com/goto/optimus/sdk/plugin"
+	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
@@ -33,8 +34,8 @@ type extractorFactoryMock struct {
 	mock.Mock
 }
 
-func (e *extractorFactoryMock) New(client bqiface.Client) (UpstreamExtractor, error) {
-	args := e.Called(client)
+func (e *extractorFactoryMock) New(client bqiface.Client, logger hclog.Logger) (UpstreamExtractor, error) {
+	args := e.Called(client, logger)
 
 	r1, ok := args.Get(0).(UpstreamExtractor)
 	if !ok {
@@ -48,10 +49,10 @@ type extractorMock struct {
 	mock.Mock
 }
 
-func (e *extractorMock) ExtractUpstreams(ctx context.Context, query string, resourcesToIgnore []upstream.Resource) ([]*upstream.Upstream, error) {
+func (e *extractorMock) ExtractUpstreams(ctx context.Context, query string, resourcesToIgnore []upstream.Resource) ([]upstream.Resource, error) {
 	args := e.Called(ctx, query, resourcesToIgnore)
 
-	r1, ok := args.Get(0).([]*upstream.Upstream)
+	r1, ok := args.Get(0).([]upstream.Resource)
 	if !ok {
 		return nil, args.Error(1)
 	}
@@ -61,6 +62,7 @@ func (e *extractorMock) ExtractUpstreams(ctx context.Context, query string, reso
 
 func TestBQ2BQ(t *testing.T) {
 	ctx := context.Background()
+	logger := hclog.NewNullLogger()
 
 	t.Run("GetName", func(t *testing.T) {
 		t.Run("should return name bq2bq", func(t *testing.T) {
@@ -263,22 +265,21 @@ Select * from table where ts > "2021-01-16T00:00:00Z"`
 
 			extractor := new(extractorMock)
 			extractor.On("ExtractUpstreams", mock.Anything, query, []upstream.Resource{destination}).
-				Return([]*upstream.Upstream{
+				Return([]upstream.Resource{
 					{
-						Resource: upstream.Resource{
-							Project: "proj",
-							Dataset: "dataset",
-							Name:    "table1",
-						},
+						Project: "proj",
+						Dataset: "dataset",
+						Name:    "table1",
 					},
 				}, nil)
 
 			extractorFac := new(extractorFactoryMock)
-			extractorFac.On("New", client).Return(extractor, nil)
+			extractorFac.On("New", client, logger).Return(extractor, nil)
 
 			b := &BQ2BQ{
 				ClientFac:    bqClientFac,
 				ExtractorFac: extractorFac,
+				logger:       logger,
 			}
 			got, err := b.GenerateDependencies(ctx, data)
 			if err != nil {
@@ -335,45 +336,26 @@ Select * from table where ts > "2021-01-16T00:00:00Z"`
 
 			extractor := new(extractorMock)
 			extractor.On("ExtractUpstreams", mock.Anything, query, []upstream.Resource{destination}).
-				Return([]*upstream.Upstream{
+				Return([]upstream.Resource{
 					{
-						Resource: upstream.Resource{
-							Project: "proj",
-							Dataset: "dataset",
-							Name:    "table1",
-						},
-						Upstreams: []*upstream.Upstream{
-							{
-								Resource: upstream.Resource{
-									Project: "proj",
-									Dataset: "dataset",
-									Name:    "table2",
-								},
-							},
-						},
+						Project: "proj",
+						Dataset: "dataset",
+						Name:    "table1",
 					},
 					{
-						Resource: upstream.Resource{
-							Project: "proj",
-							Dataset: "dataset",
-							Name:    "table2",
-						},
-					},
-					{
-						Resource: upstream.Resource{
-							Project: "proj",
-							Dataset: "dataset",
-							Name:    "table1",
-						},
+						Project: "proj",
+						Dataset: "dataset",
+						Name:    "table2",
 					},
 				}, nil)
 
 			extractorFac := new(extractorFactoryMock)
-			extractorFac.On("New", client).Return(extractor, nil)
+			extractorFac.On("New", client, logger).Return(extractor, nil)
 
 			b := &BQ2BQ{
 				ClientFac:    bqClientFac,
 				ExtractorFac: extractorFac,
+				logger:       logger,
 			}
 			got, err := b.GenerateDependencies(ctx, data)
 			if err != nil {
@@ -430,14 +412,15 @@ Select * from table where ts > "2021-01-16T00:00:00Z"`
 
 			extractor := new(extractorMock)
 			extractor.On("ExtractUpstreams", mock.Anything, query, []upstream.Resource{destination}).
-				Return([]*upstream.Upstream{}, nil)
+				Return([]upstream.Resource{}, nil)
 
 			extractorFac := new(extractorFactoryMock)
-			extractorFac.On("New", client).Return(extractor, nil)
+			extractorFac.On("New", client, logger).Return(extractor, nil)
 
 			b := &BQ2BQ{
 				ClientFac:    bqClientFac,
 				ExtractorFac: extractorFac,
+				logger:       logger,
 			}
 			got, err := b.GenerateDependencies(ctx, data)
 			if err != nil {
@@ -494,22 +477,21 @@ Select * from table where ts > "2021-01-16T00:00:00Z"`
 
 			extractor := new(extractorMock)
 			extractor.On("ExtractUpstreams", mock.Anything, query, []upstream.Resource{destination}).
-				Return([]*upstream.Upstream{
+				Return([]upstream.Resource{
 					{
-						Resource: upstream.Resource{
-							Project: "proj",
-							Dataset: "dataset",
-							Name:    "table1",
-						},
+						Project: "proj",
+						Dataset: "dataset",
+						Name:    "table1",
 					},
 				}, nil)
 
 			extractorFac := new(extractorFactoryMock)
-			extractorFac.On("New", client).Return(extractor, nil)
+			extractorFac.On("New", client, logger).Return(extractor, nil)
 
 			b := &BQ2BQ{
 				ClientFac:    bqClientFac,
 				ExtractorFac: extractorFac,
+				logger:       logger,
 			}
 			got, err := b.GenerateDependencies(ctx, data)
 			if err != nil {
@@ -566,22 +548,21 @@ Select * from table where ts > "2021-01-16T00:00:00Z"`
 
 			extractor := new(extractorMock)
 			extractor.On("ExtractUpstreams", mock.Anything, query, []upstream.Resource{destination}).
-				Return([]*upstream.Upstream{
+				Return([]upstream.Resource{
 					{
-						Resource: upstream.Resource{
-							Project: "proj",
-							Dataset: "dataset",
-							Name:    "table1",
-						},
+						Project: "proj",
+						Dataset: "dataset",
+						Name:    "table1",
 					},
 				}, nil)
 
 			extractorFac := new(extractorFactoryMock)
-			extractorFac.On("New", client).Return(extractor, nil)
+			extractorFac.On("New", client, logger).Return(extractor, nil)
 
 			b := &BQ2BQ{
 				ClientFac:    bqClientFac,
 				ExtractorFac: extractorFac,
+				logger:       logger,
 			}
 			got, err := b.GenerateDependencies(ctx, data)
 			if err != nil {

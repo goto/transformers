@@ -8,71 +8,67 @@ import (
 	"sync"
 
 	"github.com/googleapis/google-cloud-go-testing/bigquery/bqiface"
+	"github.com/hashicorp/go-hclog"
 )
 
 type Extractor struct {
 	mutex  *sync.Mutex
 	client bqiface.Client
 
-	schemaToUpstreams map[string][]*Upstream
+	urnToUpstreams map[string][]Resource
+	logger         hclog.Logger
 }
 
-func NewExtractor(client bqiface.Client) (*Extractor, error) {
+func NewExtractor(client bqiface.Client, logger hclog.Logger) (*Extractor, error) {
 	if client == nil {
 		return nil, errors.New("client is nil")
 	}
 
+	if logger == nil {
+		return nil, errors.New("logger is nil")
+	}
+
 	return &Extractor{
-		mutex:             &sync.Mutex{},
-		client:            client,
-		schemaToUpstreams: make(map[string][]*Upstream),
+		mutex:          &sync.Mutex{},
+		client:         client,
+		urnToUpstreams: make(map[string][]Resource),
+		logger:         logger,
 	}, nil
 }
 
-func (e *Extractor) ExtractUpstreams(ctx context.Context, query string, resourcesToIgnore []Resource) ([]*Upstream, error) {
+func (e *Extractor) ExtractUpstreams(ctx context.Context, query string, resourcesToIgnore []Resource) ([]Resource, error) {
 	ignoredResources := make(map[Resource]bool)
 	for _, r := range resourcesToIgnore {
 		ignoredResources[r] = true
 	}
 
-	metResource := make(map[Resource]bool)
-	return e.extractUpstreamsFromQuery(ctx, query, ignoredResources, metResource, ParseTopLevelUpstreamsFromQuery)
+	encounteredResources := make(map[Resource]bool)
+	return e.extractUpstreamsFromQuery(ctx, query, ignoredResources, encounteredResources, ParseTopLevelUpstreamsFromQuery)
 }
 
 func (e *Extractor) extractUpstreamsFromQuery(
 	ctx context.Context, query string,
-	ignoredResources, metResource map[Resource]bool,
+	ignoredResources, encounteredResources map[Resource]bool,
 	parseFn QueryParser,
-) ([]*Upstream, error) {
-	upstreamResources := parseFn(query)
+) ([]Resource, error) {
+	resources := parseFn(query)
+	uniqueResources := UniqueFilterResources(resources)
+	filteredResources := FilterResources(uniqueResources, func(r Resource) bool { return ignoredResources[r] })
 
-	uniqueUpstreamResources := UniqueFilterResources(upstreamResources)
-
-	filteredUpstreamResources := FilterResources(uniqueUpstreamResources, func(r Resource) bool { return ignoredResources[r] })
-
-	resourceGroups := GroupResources(filteredUpstreamResources)
-
-	var output []*Upstream
+	output := filteredResources
 	var errorMessages []string
 
+	resourceGroups := GroupResources(filteredResources)
 	for _, group := range resourceGroups {
-		schemas, err := ReadSchemasUnderGroup(ctx, e.client, group)
+		result, err := e.getUpstreamsFromGroup(ctx, group, ignoredResources, encounteredResources)
 		if err != nil {
 			errorMessages = append(errorMessages, err.Error())
 		}
 
-		nestedable, rest := splitNestedableFromRest(schemas)
-
-		restsNodes := convertSchemasToNodes(rest)
-		output = append(output, restsNodes...)
-
-		nestedNodes, err := e.extractNestedNodes(ctx, nestedable, ignoredResources, metResource)
-		if err != nil {
-			errorMessages = append(errorMessages, err.Error())
-		}
-
-		output = append(output, nestedNodes...)
+		output = append(output, result...)
 	}
+
+	output = UniqueFilterResources(output)
 
 	if len(errorMessages) > 0 {
 		return output, fmt.Errorf("error reading upstream: [%s]", strings.Join(errorMessages, ", "))
@@ -80,30 +76,62 @@ func (e *Extractor) extractUpstreamsFromQuery(
 	return output, nil
 }
 
-func (e *Extractor) extractNestedNodes(
+func (e *Extractor) getUpstreamsFromGroup(
+	ctx context.Context, group *ResourceGroup,
+	ignoredResources, encounteredResources map[Resource]bool,
+) ([]Resource, error) {
+	var output []Resource
+	var errorMessages []string
+
+	schemas, err := ReadSchemasUnderGroup(ctx, e.client, group)
+	if err != nil {
+		if e.isIgnorableError(err) {
+			e.logger.Error("ignoring error when reading schema for [%s.%s]: %v", group.Project, group.Dataset, err)
+		} else {
+			errorMessages = append(errorMessages, err.Error())
+		}
+	}
+
+	nestedable, unnestedable := splitNestedableFromRest(schemas)
+
+	unnestedableResources := convertSchemasToResources(unnestedable)
+	output = append(output, unnestedableResources...)
+
+	nestedResources, err := e.extractNestedableUpstreams(ctx, nestedable, ignoredResources, encounteredResources)
+	if err != nil {
+		errorMessages = append(errorMessages, err.Error())
+	}
+
+	output = append(output, nestedResources...)
+	if len(errorMessages) > 0 {
+		return output, fmt.Errorf("error getting upstream for [%s.%s]: %s", group.Project, group.Dataset, strings.Join(errorMessages, ", "))
+	}
+
+	return output, nil
+}
+
+func (e *Extractor) extractNestedableUpstreams(
 	ctx context.Context, schemas []*Schema,
-	ignoredResources, metResource map[Resource]bool,
-) ([]*Upstream, error) {
-	var output []*Upstream
+	ignoredResources, encounteredResources map[Resource]bool,
+) ([]Resource, error) {
+	var output []Resource
 	var errorMessages []string
 
 	for _, sch := range schemas {
-		if metResource[sch.Resource] {
-			msg := fmt.Sprintf("circular reference is detected: [%s]", e.getCircularURNs(metResource))
+		if encounteredResources[sch.Resource] {
+			msg := fmt.Sprintf("circular reference is detected: [%s]", e.getCircularURNs(encounteredResources))
 			errorMessages = append(errorMessages, msg)
 			continue
 		}
-		metResource[sch.Resource] = true
+		encounteredResources[sch.Resource] = true
 
-		nodes, err := e.getNodes(ctx, sch, ignoredResources, metResource)
+		upstreams, err := e.getUpstreams(ctx, sch, ignoredResources, encounteredResources)
 		if err != nil {
 			errorMessages = append(errorMessages, err.Error())
 		}
 
-		output = append(output, &Upstream{
-			Resource:  sch.Resource,
-			Upstreams: nodes,
-		})
+		output = append(output, sch.Resource)
+		output = append(output, upstreams...)
 	}
 
 	if len(errorMessages) > 0 {
@@ -112,34 +140,39 @@ func (e *Extractor) extractNestedNodes(
 	return output, nil
 }
 
-func (e *Extractor) getNodes(
+func (e *Extractor) getUpstreams(
 	ctx context.Context, schema *Schema,
-	ignoredResources, metResource map[Resource]bool,
-) ([]*Upstream, error) {
-	key := schema.Resource.URN()
+	ignoredResources, encounteredResources map[Resource]bool,
+) ([]Resource, error) {
+	urn := schema.Resource.URN()
 
 	e.mutex.Lock()
-	existingNodes, ok := e.schemaToUpstreams[key]
+	existingUpstreams, ok := e.urnToUpstreams[urn]
 	e.mutex.Unlock()
 
 	if ok {
-		return existingNodes, nil
+		return existingUpstreams, nil
 	}
 
-	nodes, err := e.extractUpstreamsFromQuery(ctx, schema.DDL, ignoredResources, metResource, ParseNestedUpsreamsFromDDL)
+	upstreams, err := e.extractUpstreamsFromQuery(ctx, schema.DDL, ignoredResources, encounteredResources, ParseNestedUpsreamsFromDDL)
 
 	e.mutex.Lock()
-	e.schemaToUpstreams[key] = nodes
+	e.urnToUpstreams[urn] = upstreams
 	e.mutex.Unlock()
 
-	return nodes, err
+	return upstreams, err
 }
 
-func (*Extractor) getCircularURNs(metResource map[Resource]bool) string {
+func (*Extractor) getCircularURNs(encounteredResources map[Resource]bool) string {
 	var urns []string
-	for resource := range metResource {
+	for resource := range encounteredResources {
 		urns = append(urns, resource.URN())
 	}
 
 	return strings.Join(urns, ", ")
+}
+
+func (*Extractor) isIgnorableError(err error) bool {
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "access denied") || strings.Contains(msg, "user does not have permission")
 }
