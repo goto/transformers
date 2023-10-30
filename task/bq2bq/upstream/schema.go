@@ -179,12 +179,11 @@ func splitNestedableFromRest(schemas []*Schema) (nestedable, rests []*Schema) {
 	return nestedable, rests
 }
 
-func convertSchemasToNodes(schemas []*Schema) []*Upstream {
-	output := make([]*Upstream, len(schemas))
+func convertSchemasToResources(schemas []*Schema) []Resource {
+	output := make([]Resource, len(schemas))
+
 	for i, sch := range schemas {
-		output[i] = &Upstream{
-			Resource: sch.Resource,
-		}
+		output[i] = sch.Resource
 	}
 
 	return output

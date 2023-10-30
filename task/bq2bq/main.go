@@ -47,11 +47,11 @@ type ClientFactory interface {
 }
 
 type UpstreamExtractor interface {
-	ExtractUpstreams(ctx context.Context, query string, resourcesToIgnore []upstream.Resource) ([]*upstream.Upstream, error)
+	ExtractUpstreams(ctx context.Context, query string, resourcesToIgnore []upstream.Resource) ([]upstream.Resource, error)
 }
 
 type ExtractorFactory interface {
-	New(client bqiface.Client) (UpstreamExtractor, error)
+	New(client bqiface.Client, logger hclog.Logger) (UpstreamExtractor, error)
 }
 
 type BQ2BQ struct {
@@ -224,10 +224,7 @@ func (b *BQ2BQ) GenerateDependencies(ctx context.Context, request plugin.Generat
 		return response, fmt.Errorf("error extracting upstreams: %w", err)
 	}
 
-	flattenedUpstreams := upstream.FlattenUpstreams(upstreams)
-	uniqueUpstreams := upstream.UniqueFilterResources(flattenedUpstreams)
-
-	formattedUpstreams := b.formatUpstreams(uniqueUpstreams, func(r upstream.Resource) string {
+	formattedUpstreams := b.formatUpstreams(upstreams, func(r upstream.Resource) string {
 		name := fmt.Sprintf("%s:%s.%s", r.Project, r.Dataset, r.Name)
 		return fmt.Sprintf(plugin.DestinationURNFormat, selfTable.Type, name)
 	})
@@ -237,7 +234,7 @@ func (b *BQ2BQ) GenerateDependencies(ctx context.Context, request plugin.Generat
 	return response, nil
 }
 
-func (b *BQ2BQ) extractUpstreams(ctx context.Context, query, svcAccSecret string, resourcesToIgnore []upstream.Resource) ([]*upstream.Upstream, error) {
+func (b *BQ2BQ) extractUpstreams(ctx context.Context, query, svcAccSecret string, resourcesToIgnore []upstream.Resource) ([]upstream.Resource, error) {
 	spanCtx, span := StartChildSpan(ctx, "extractUpstreams")
 	defer span.End()
 
@@ -247,7 +244,7 @@ func (b *BQ2BQ) extractUpstreams(ctx context.Context, query, svcAccSecret string
 			return nil, fmt.Errorf("error creating bigquery client: %w", err)
 		}
 
-		extractor, err := b.ExtractorFac.New(client)
+		extractor, err := b.ExtractorFac.New(client, b.logger)
 		if err != nil {
 			return nil, fmt.Errorf("error initializing upstream extractor: %w", err)
 		}
@@ -263,6 +260,7 @@ func (b *BQ2BQ) extractUpstreams(ctx context.Context, query, svcAccSecret string
 			}
 
 			b.logger.Error("error extracting upstreams", err)
+			return nil, err
 		}
 
 		return upstreams, nil

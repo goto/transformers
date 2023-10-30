@@ -6,6 +6,7 @@ import (
 
 	"cloud.google.com/go/bigquery"
 	"github.com/googleapis/google-cloud-go-testing/bigquery/bqiface"
+	"github.com/hashicorp/go-hclog"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/drive/v2"
 	"google.golang.org/api/option"
@@ -35,6 +36,6 @@ func (fac *DefaultBQClientFactory) New(ctx context.Context, svcAccount string) (
 type DefaultUpstreamExtractorFactory struct {
 }
 
-func (d *DefaultUpstreamExtractorFactory) New(client bqiface.Client) (UpstreamExtractor, error) {
-	return upstream.NewExtractor(client)
+func (d *DefaultUpstreamExtractorFactory) New(client bqiface.Client, logger hclog.Logger) (UpstreamExtractor, error) {
+	return upstream.NewExtractor(client, logger)
 }
