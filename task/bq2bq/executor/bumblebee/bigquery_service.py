@@ -53,7 +53,7 @@ class BaseBigqueryService(ABC):
 
 class BigqueryService(BaseBigqueryService):
 
-    def __init__(self, client, labels, writer, on_job_finish = None, on_job_register = None):
+    def __init__(self, client, labels, writer, retry_timeout = None, on_job_finish = None, on_job_register = None):
         """
 
         :rtype:
@@ -61,6 +61,7 @@ class BigqueryService(BaseBigqueryService):
         self.client = client
         self.labels = labels
         self.writer = writer
+        self.retry = bigquery.DEFAULT_RETRY.with_deadline(retry_timeout) if retry_timeout else bigquery.DEFAULT_RETRY
         self.on_job_finish = on_job_finish
         self.on_job_register = on_job_register
 
@@ -74,7 +75,8 @@ class BigqueryService(BaseBigqueryService):
 
         logger.info("executing query")
         query_job = self.client.query(query=query,
-                                      job_config=query_job_config)
+                                      job_config=query_job_config,
+                                      retry=self.retry)
         logger.info("Job {} is initially in state {} of {} project".format(query_job.job_id, query_job.state,
                                                                            query_job.project))
 
@@ -125,7 +127,9 @@ class BigqueryService(BaseBigqueryService):
             query_job_config.destination = table_ref
 
         logger.info("transform load")
-        query_job = self.client.query(query=query, job_config=query_job_config)
+        query_job = self.client.query(query=query,
+                                      job_config=query_job_config,
+                                      retry=self.retry)
         logger.info("Job {} is initially in state {} of {} project".format(query_job.job_id, query_job.state,
                                                                            query_job.project))
 
@@ -183,7 +187,7 @@ def create_bigquery_service(task_config: TaskConfigFromEnv, labels, writer, on_j
     default_query_job_config.priority = task_config.query_priority
     default_query_job_config.allow_field_addition = task_config.allow_field_addition
     client = bigquery.Client(project=task_config.execution_project, credentials=credentials, default_query_job_config=default_query_job_config)
-    return BigqueryService(client, labels, writer, on_job_finish=on_job_finish, on_job_register=on_job_register)
+    return BigqueryService(client, labels, writer, retry_timeout=task_config.retry_timeout, on_job_finish=on_job_finish, on_job_register=on_job_register)
 
 
 def _get_bigquery_credentials():

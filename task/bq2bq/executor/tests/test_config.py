@@ -156,6 +156,16 @@ class TestConfig(TestCase):
 
         self.assertEqual(config.concurrency, 2)
 
+    def test_retry_timeout(self):
+        self.set_vars_with_default()
+        config = TaskConfigFromEnv()
+        self.assertEqual(config.retry_timeout, None)
+
+        self.set_vars_with_default()
+        os.environ['RETRY_TIMEOUT'] = "120.0"
+        config = TaskConfigFromEnv()
+        self.assertEqual(config.retry_timeout, 120.0)
+
     def test_concurrency_should_not_zero_exception(self):
         self.set_vars_with_default()
         os.environ['CONCURRENCY'] = "0"
