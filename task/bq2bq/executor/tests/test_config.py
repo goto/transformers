@@ -162,7 +162,7 @@ class TestConfig(TestCase):
         self.assertEqual(config.retry_timeout, None)
 
         self.set_vars_with_default()
-        os.environ['RETRY_TIMEOUT'] = "120.0"
+        os.environ['RETRY_TIMEOUT_IN_SECONDS'] = "120.0"
         config = TaskConfigFromEnv()
         self.assertEqual(config.retry_timeout, 120.0)
 
