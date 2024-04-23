@@ -67,7 +67,10 @@ class BigqueryService(BaseBigqueryService):
         self.client = client
         self.labels = labels
         self.writer = writer
-        if_additional_transient_error = if_exception_type(requests.exceptions.Timeout)
+        if_additional_transient_error = if_exception_type(
+            requests.exceptions.Timeout,
+            requests.exceptions.SSLError,
+        )
         predicate = if_exception_funcs(if_transient_error, if_additional_transient_error)
         retry = bigquery.DEFAULT_RETRY.with_deadline(retry_timeout) if retry_timeout else bigquery.DEFAULT_RETRY
         retry.with_predicate(predicate)
