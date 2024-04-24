@@ -73,8 +73,7 @@ class BigqueryService(BaseBigqueryService):
         )
         predicate = if_exception_funcs(if_transient_error, if_additional_transient_error)
         retry = bigquery.DEFAULT_RETRY.with_deadline(retry_timeout) if retry_timeout else bigquery.DEFAULT_RETRY
-        retry.with_predicate(predicate)
-        self.retry = retry
+        self.retry = retry.with_predicate(predicate)
         self.on_job_finish = on_job_finish
         self.on_job_register = on_job_register
 
