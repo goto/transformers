@@ -126,6 +126,7 @@ class TaskConfigFromEnv(TaskConfig):
         self._use_spillover = _bool_from_str(get_env_config("USE_SPILLOVER", default="true"))
         self._concurrency = _validate_greater_than_zero(int(get_env_config("CONCURRENCY", default=1)))
         self._allow_field_addition = _bool_from_str(get_env_config("ALLOW_FIELD_ADDITION", default="false"))
+        self._retry_timeout = get_env_config("RETRY_TIMEOUT_IN_SECONDS", default=None)
 
     @property
     def destination_project(self) -> str:
@@ -177,6 +178,12 @@ class TaskConfigFromEnv(TaskConfig):
     @property
     def concurrency(self) -> int:
         return self._concurrency
+
+    @property
+    def retry_timeout(self) -> Optional[float]:
+        if self._retry_timeout:
+            return float(self._retry_timeout)
+        return None
 
     def print(self):
         logger.info("task config:\n{}".format(
@@ -348,6 +355,7 @@ class TaskConfigFromFile(TaskConfig):
         self._use_spillover = _bool_from_str(self._get_property_or_default("USE_SPILLOVER", "true"))
         self._concurrency = _validate_greater_than_zero(int(self._get_property_or_default("CONCURRENCY", 1)))
         self._allow_field_addition = _bool_from_str(self._get_property_or_default("ALLOW_FIELD_ADDITION", "false"))
+        self._retry_timeout = self._get_property_or_default("RETRY_TIMEOUT_IN_SECONDS", None)
 
     @property
     def sql_type(self) -> str:
@@ -411,6 +419,12 @@ class TaskConfigFromFile(TaskConfig):
     @property
     def allow_field_addition(self) -> bool:
         return self._allow_field_addition
+
+    @property
+    def retry_timeout(self) -> Optional[float]:
+        if self._retry_timeout:
+            return float(self._retry_timeout)
+        return None
 
     def print(self):
         logger.info("task config:\n{}".format(
