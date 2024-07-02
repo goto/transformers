@@ -175,6 +175,45 @@ class TestTransformationTask(TestCase):
                                                            write_disposition=WriteDisposition.WRITE_TRUNCATE,
                                                            destination_table="bq_project.playground_dev.abcd$20190103",
                                                            allow_field_addition=False)
+    @mock.patch("bumblebee.bigquery_service.BigqueryService")
+    def test_non_partition_transform_7d_window_without_spillover(self, BigqueryServiceMock):
+        query = """select count(1) from table where date >= '__dstart__' and date < '__dend__'"""
+
+        properties = """
+                [DESTINATION]
+                PROJECT="bq_project"
+                DATASET="playground_dev"
+                TABLE="abcd"
+                SQL_TYPE="STANDARD" #LEGACY/STANDARD
+
+                [TRANSFORMATION]
+                WINDOW_SIZE = 7d
+                WINDOW_OFFSET = 0
+                WINDOW_TRUNCATE_UPTO = d
+                TIMEZONE="UTC"
+
+                [LOAD]
+                LOAD_METHOD="REPLACE"
+                """
+
+        set_vars_with_default()
+        task_config = TaskConfigFromEnv()
+        localized_start_time = localise_datetime(datetime(2019, 1, 3), task_config.timezone)
+        localized_end_time = localise_datetime(datetime(2019, 1, 10), task_config.timezone)
+        localized_execution_time = localise_datetime(datetime(2019, 1, 3), task_config.timezone)
+
+        bigquery_service = BigqueryServiceMock()
+
+        task = NonPartitionedTableTransformation(bigquery_service, task_config, query, localized_start_time,
+                                             localized_end_time, False, localized_execution_time)
+        task.transform()
+
+        final_query = """select count(1) from table where date >= '2019-01-03' and date < '2019-01-10'"""
+
+        bigquery_service.transform_load.assert_called_with(query=final_query,
+                                                           write_disposition=WriteDisposition.WRITE_APPEND,
+                                                           destination_table="bq_project.playground_dev.abcd",
+                                                           allow_field_addition=False)
 
     @mock.patch("bumblebee.bigquery_service.BigqueryService")
     def test_single_partition_transform_2d_with_spillover(self, BigqueryServiceMock):
