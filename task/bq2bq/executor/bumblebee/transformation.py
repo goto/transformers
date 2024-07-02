@@ -70,7 +70,7 @@ class Transformation:
             bq_destination_table = self.bigquery_service.get_table(self.task_config.destination_table)
             if bq_destination_table.time_partitioning is None:
                 task_queries = self.sql_query.split(OPTIMUS_QUERY_BREAK_MARKER)
-                transformation = TableTransformation(self.bigquery_service,
+                transformation = NonPartitionedTableTransformation(self.bigquery_service,
                                                      self.task_config,
                                                      task_queries[0],
                                                      self.dstart,
@@ -199,6 +199,42 @@ class DMLBasedTransformation:
         logger.info("finished")
 
 
+
+class NonPartitionedTableTransformation:
+    """
+    Query transformation effects whole non partitioned table
+    """
+
+    def __init__(self, bigquery_service: BigqueryService,
+                 task_config: TaskConfig,
+                 task_query: str,
+                 dstart: datetime,
+                 dend: datetime,
+                 dry_run: bool,
+                 execution_time: datetime):
+        self.bigquery_service = bigquery_service
+        self.task_config = task_config
+        self.task_query = task_query
+        self.dry_run = dry_run
+        self.window = CustomWindow(dstart, dend)
+        self.execution_time = execution_time
+
+    def transform(self):
+        loader = TableLoader(self.bigquery_service, self.task_config.destination_table, LoadMethod.APPEND,
+                             self.task_config.allow_field_addition)
+        logger.info("create transformation for table")
+
+        task = NonPartitionTransformation(self.task_config,
+                                       loader,
+                                       self.task_query,
+                                       self.window,
+                                       self.dry_run,
+                                       self.execution_time)
+
+        self.bigquery_service.execute_query("truncate table `gtfndata-integration.playground.replace_table_target`;")
+        task.execute()
+
+
 class TableTransformation:
     """
     Query transformation effects whole non partitioned table
@@ -269,6 +305,38 @@ class SinglePartitionTransformation:
                                        self.execution_time)
         task.execute()
 
+
+class NonPartitionTransformation:
+    def __init__(self,
+                 task_config: TaskConfig,
+                 loader: BaseLoader,
+                 query: str,
+                 window: Window,
+                 dry_run: bool,
+                 execution_time: datetime):
+        self.dry_run = dry_run
+        self.loader = loader
+
+        destination_parameter = DestinationParameter(task_config.destination_table)
+        window_parameter = WindowParameter(window)
+        execution_parameter = ExecutionParameter(execution_time)
+
+        self.query = Query(query).apply_parameter(window_parameter).apply_parameter(
+            execution_parameter).apply_parameter(destination_parameter)
+
+    def execute(self):
+        logger.info("start transformation job")
+        self.query.print_with_logger(logger)
+
+        result = None
+        if not self.dry_run:
+            result = self.loader.load(self.query)
+
+        logger.info(result)
+        logger.info("finished")
+
+    async def async_execute(self):
+        self.execute()
 
 class PartitionTransformation:
     def __init__(self,
