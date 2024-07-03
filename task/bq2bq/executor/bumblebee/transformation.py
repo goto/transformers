@@ -231,7 +231,9 @@ class NonPartitionedTableTransformation:
                                        self.dry_run,
                                        self.execution_time)
 
-        self.bigquery_service.execute_query("truncate table `gtfndata-integration.playground.replace_table_target`;")
+        truncate_query = "truncate table `{}`;".format(self.task_config.destination_table)
+
+        self.bigquery_service.execute_query(truncate_query)
         task.execute()
 
 
