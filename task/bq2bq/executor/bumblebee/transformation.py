@@ -194,10 +194,10 @@ class DMLBasedTransformation:
 
         if not self.dry_run:
             result = self.loader.load(query)
-
-        logger.info(result)
-        logger.info("finished")
-
+            logger.info(result)
+            logger.info("finished")
+        else:
+            logger.info("dry-run finished")
 
 class TableTransformation:
     """
@@ -295,9 +295,10 @@ class PartitionTransformation:
         result = None
         if not self.dry_run:
             result = self.loader.load(self.query)
-
-        logger.info(result)
-        logger.info("finished")
+            logger.info(result)
+            logger.info("finished")
+        else:
+            logger.info("dry-run finished")
 
     async def async_execute(self):
         self.execute()
@@ -355,6 +356,8 @@ class MergeReplaceTransformation:
         if not self.dry_run:
             result = self.loader.load(query)
             logger.info("finished {}".format(result.total_rows))
+        else:
+            logger.info("dry-run finished")
 
 
 class MultiPartitionTransformation:
