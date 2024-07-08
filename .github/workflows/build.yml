@@ -23,4 +23,4 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: -f .goreleaser.yml --snapshot --rm-dist
+          args: -f .goreleaser.yml --snapshot --clean
