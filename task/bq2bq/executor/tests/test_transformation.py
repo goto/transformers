@@ -51,6 +51,7 @@ class TestTransformationTask(TestCase):
         bigquery_service.transform_load.assert_called_with(query=final_query,
                                                            write_disposition=WriteDisposition.WRITE_TRUNCATE,
                                                            destination_table="bq_project.playground_dev.abcd$20190101",
+                                                           dry_run=False,
                                                            allow_field_addition=False)
 
     @mock.patch("bumblebee.bigquery_service.BigqueryService")
@@ -90,6 +91,7 @@ class TestTransformationTask(TestCase):
         bigquery_service.transform_load.assert_called_with(query=final_query,
                                                            write_disposition=WriteDisposition.WRITE_TRUNCATE,
                                                            destination_table="bq_project.playground_dev.abcd",
+                                                           dry_run=False,
                                                            allow_field_addition=False)
 
     @mock.patch("bumblebee.bigquery_service.BigqueryService")
@@ -113,6 +115,7 @@ class TestTransformationTask(TestCase):
         bigquery_service.transform_load.assert_called_with(query=final_query,
                                                            write_disposition=WriteDisposition.WRITE_TRUNCATE,
                                                            destination_table="bq_project.playground_dev.abcd$20190101",
+                                                           dry_run=False,
                                                            allow_field_addition=False)
 
     @mock.patch("bumblebee.bigquery_service.BigqueryService")
@@ -135,6 +138,7 @@ class TestTransformationTask(TestCase):
         bigquery_service.transform_load.assert_called_with(query=final_query,
                                                            write_disposition=WriteDisposition.WRITE_TRUNCATE,
                                                            destination_table="bq_project.playground_dev.abcd$20190104",
+                                                           dry_run=False,
                                                            allow_field_addition=False)
 
     @mock.patch("bumblebee.bigquery_service.BigqueryService")
@@ -174,6 +178,7 @@ class TestTransformationTask(TestCase):
         bigquery_service.transform_load.assert_called_with(query=final_query,
                                                            write_disposition=WriteDisposition.WRITE_TRUNCATE,
                                                            destination_table="bq_project.playground_dev.abcd$20190103",
+                                                           dry_run=False,
                                                            allow_field_addition=False)
 
     @mock.patch("bumblebee.bigquery_service.BigqueryService")
@@ -220,7 +225,7 @@ class TestTransformationTask(TestCase):
         task.execute()
 
         final_query = """select count(1) from table where date >= '2019-01-02' and date < '2019-01-03'"""
-        bigquery_service.execute_query.assert_called_with(final_query)
+        bigquery_service.execute_query.assert_called_with(final_query,dry_run=False)
 
     @mock.patch("bumblebee.bigquery_service.BigqueryService")
     def test_execute_dry_run(self, BigqueryServiceMock):
@@ -237,7 +242,11 @@ class TestTransformationTask(TestCase):
         task = TableTransformation(bigquery_service, task_config, query, localized_start_time,
                                    localized_end_time, dry_run, localized_execution_time)
         task.transform()
-        bigquery_service.transform_load.assert_not_called()
+        bigquery_service.transform_load.assert_called_with(query=query,
+                                                           write_disposition=WriteDisposition.WRITE_TRUNCATE,
+                                                           destination_table="bq_project.playground_dev.abcd$20190101",
+                                                           dry_run=True,
+                                                           allow_field_addition=False)
 
 
     @mock.patch("bumblebee.bigquery_service.BigqueryService")
@@ -262,6 +271,7 @@ class TestTransformationTask(TestCase):
         bigquery_service.transform_load.assert_called_with(query=final_query,
                                                            write_disposition=WriteDisposition.WRITE_TRUNCATE,
                                                            destination_table="bq_project.playground_dev.abcd",
+                                                           dry_run=False,
                                                            allow_field_addition=True)
 
 
@@ -289,7 +299,7 @@ class TestTransformation(TestCase):
         transformation.transform()
 
         final_query = """select count(1) from table where date >= '2019-02-01' and date < '2019-02-02'"""
-        bigquery_service.execute_query.assert_called_with(final_query)
+        bigquery_service.execute_query.assert_called_with(final_query,dry_run=False)
 
     @mock.patch("bumblebee.bigquery_service.BigqueryService")
     def test_should_run_table_task(self, BigqueryServiceMock):
@@ -325,6 +335,7 @@ class TestTransformation(TestCase):
         bigquery_service.transform_load.assert_called_with(query=final_query,
                                                    write_disposition=WriteDisposition.WRITE_APPEND,
                                                    destination_table="bq_project.playground_dev.abcd",
+                                                   dry_run=False,
                                                    allow_field_addition=False)
 
     @mock.patch("bumblebee.bigquery_service.BigqueryService")
@@ -362,6 +373,7 @@ class TestTransformation(TestCase):
         bigquery_service.transform_load.assert_called_with(query=final_query,
                                                            write_disposition=WriteDisposition.WRITE_TRUNCATE,
                                                            destination_table="bq_project.playground_dev.abcd",
+                                                           dry_run=False,
                                                            allow_field_addition=False)
 
     @mock.patch("bumblebee.bigquery_service.BigqueryService")
@@ -401,7 +413,7 @@ class TestTransformation(TestCase):
         transformation.transform()
 
         final_query = """-- Optimus generated\nDECLARE partitions ARRAY<DATE>;\n\n\n\nCREATE TEMP TABLE `opt__partitions` AS (\n  select count(1) from table where date >= '__dstart__' and date < '__dend__'\n);\n\nSET (partitions) = (\n    SELECT AS STRUCT\n        array_agg(DISTINCT DATE(`event_timestamp`))\n    FROM opt__partitions\n);\n\nMERGE INTO\n  `bq_project.playground_dev.abcd` AS target\nUSING\n  (\n      Select * from `opt__partitions`\n  ) AS source\nON FALSE\nWHEN NOT MATCHED BY SOURCE AND DATE(`event_timestamp`) IN UNNEST(partitions)\nTHEN DELETE\nWHEN NOT MATCHED THEN INSERT\n  (\n     \n  )\nVALUES\n  (\n      \n  );\n"""
-        bigquery_service.execute_query.assert_called_with(final_query)
+        bigquery_service.execute_query.assert_called_with(final_query,dry_run=False)
 
     @mock.patch("bumblebee.bigquery_service.BigqueryService")
     def test_should_fail_if_partition_task_for_ingestion_time_without_filter_in_REPLACE_MERGE(self, BigqueryServiceMock):
