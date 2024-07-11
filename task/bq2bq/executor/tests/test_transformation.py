@@ -202,9 +202,11 @@ class TestTransformationTask(TestCase):
 
         calls = [call(query=final_query_1, write_disposition=WriteDisposition.WRITE_TRUNCATE,
                       destination_table="bq_project.playground_dev.abcd$20190103",
+                      dry_run=False,
                       allow_field_addition=False),
                  call(query=final_query_2, write_disposition=WriteDisposition.WRITE_TRUNCATE,
                       destination_table="bq_project.playground_dev.abcd$20190104",
+                      dry_run=False,
                       allow_field_addition=False)]
         bigquery_service.transform_load.assert_has_calls(calls, any_order=True)
         self.assertEqual(len(bigquery_service.transform_load.call_args_list), len(calls))
@@ -242,9 +244,11 @@ class TestTransformationTask(TestCase):
         task = TableTransformation(bigquery_service, task_config, query, localized_start_time,
                                    localized_end_time, dry_run, localized_execution_time)
         task.transform()
-        bigquery_service.transform_load.assert_called_with(query=query,
+
+        final_query = "select count(1) from table where date >= '2019-01-01 00:00:00' and date < '2019-01-01 00:00:00'"
+        bigquery_service.transform_load.assert_called_with(query=final_query,
                                                            write_disposition=WriteDisposition.WRITE_TRUNCATE,
-                                                           destination_table="bq_project.playground_dev.abcd$20190101",
+                                                           destination_table="bq_project.playground_dev.abcd",
                                                            dry_run=True,
                                                            allow_field_addition=False)
 
