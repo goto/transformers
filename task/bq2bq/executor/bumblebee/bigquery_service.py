@@ -35,6 +35,7 @@ class BaseBigqueryService(ABC):
                        destination_table=None,
                        write_disposition=None,
                        create_disposition=CreateDisposition.CREATE_NEVER,
+                       dry_run=False,
                        allow_field_addition=False):
         pass
 
@@ -77,8 +78,9 @@ class BigqueryService(BaseBigqueryService):
         self.on_job_finish = on_job_finish
         self.on_job_register = on_job_register
 
-    def execute_query(self, query):
+    def execute_query(self, query, dry_run=False):
         query_job_config = QueryJobConfig()
+        query_job_config.dry_run = dry_run
         query_job_config.use_legacy_sql = False
         query_job_config.labels = self.labels
 
@@ -119,11 +121,13 @@ class BigqueryService(BaseBigqueryService):
                        destination_table=None,
                        write_disposition=None,
                        create_disposition=CreateDisposition.CREATE_NEVER,
+                       dry_run=False,
                        allow_field_addition=False):
         if query is None or len(query) == 0:
             raise ValueError("query must not be Empty")
 
         query_job_config = QueryJobConfig()
+        query_job_config.dry_run = dry_run
         query_job_config.create_disposition = create_disposition
         query_job_config.write_disposition = write_disposition
         query_job_config.use_legacy_sql = False
@@ -251,7 +255,7 @@ class DummyService(BaseBigqueryService):
         return []
 
     def transform_load(self, query, source_project_id=None, destination_table=None, write_disposition=None,
-                       create_disposition=CreateDisposition.CREATE_NEVER, allow_field_addition=False):
+                       create_disposition=CreateDisposition.CREATE_NEVER, dry_run=False, allow_field_addition=False):
         log = """ transform and load with config :
         {}
         {}

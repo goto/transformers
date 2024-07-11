@@ -21,7 +21,7 @@ class PartitionLoader(BaseLoader):
         self.partition_date = partition
         self.allow_field_addition = allow_field_addition
 
-    def load(self, query):
+    def load(self, query, dry_run=False):
         partition_date_str = self.partition_date.strftime("%Y%m%d")
         load_destination = "{}${}".format(self.destination_name, partition_date_str)
         write_disposition = self.load_method.write_disposition
@@ -29,6 +29,7 @@ class PartitionLoader(BaseLoader):
         return self.bigquery_service.transform_load(query=query,
                                                     write_disposition=write_disposition,
                                                     destination_table=load_destination,
+                                                    dry_run = dry_run,
                                                     allow_field_addition=allow_field_addition)
 
 
@@ -40,10 +41,11 @@ class TableLoader(BaseLoader):
         self.load_method = load_method
         self.allow_field_addition = allow_field_addition
 
-    def load(self, query):
+    def load(self, query, dry_run=False):
         return self.bigquery_service.transform_load(query=query,
                                                     write_disposition=self.load_method.write_disposition,
                                                     destination_table=self.full_table_name,
+                                                    dry_run = dry_run,
                                                     allow_field_addition=self.allow_field_addition)
 
 
@@ -52,5 +54,5 @@ class DMLLoader(BaseLoader):
         self.bigquery_service = bigquery_service
         self.full_table_name = destination
 
-    def load(self,query):
-        return self.bigquery_service.execute_query(query)
+    def load(self,query, dry_run=False):
+        return self.bigquery_service.execute_query(query, dry_run=dry_run)

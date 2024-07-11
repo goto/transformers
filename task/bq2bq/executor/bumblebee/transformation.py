@@ -190,11 +190,10 @@ class DMLBasedTransformation:
             query = query.apply_parameter(parameter)
         query.print_with_logger(logger)
 
-        result = None
+        result = self.loader.load(query, dry_run=self.dry_run)
+        logger.info(result)
 
         if not self.dry_run:
-            result = self.loader.load(query)
-            logger.info(result)
             logger.info("finished")
         else:
             logger.info("dry-run finished")
@@ -292,10 +291,10 @@ class PartitionTransformation:
         logger.info("start transformation job")
         self.query.print_with_logger(logger)
 
-        result = None
+        result = self.loader.load(self.query, dry_run=self.dry_run)
+        logger.info(result)
+
         if not self.dry_run:
-            result = self.loader.load(self.query)
-            logger.info(result)
             logger.info("finished")
         else:
             logger.info("dry-run finished")
@@ -353,8 +352,11 @@ class MergeReplaceTransformation:
                                                   self.partition_column_type)
         query.print_with_logger(logger)
 
+
+        result = self.loader.load(query, dry_run=self.dry_run)
+        logger.info(result)
+
         if not self.dry_run:
-            result = self.loader.load(query)
             logger.info("finished {}".format(result.total_rows))
         else:
             logger.info("dry-run finished")
