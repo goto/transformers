@@ -91,6 +91,10 @@ class BigqueryService(BaseBigqueryService):
         query_job = self.client.query(query=query,
                                       job_config=query_job_config,
                                       retry=self.retry)
+        if dry_run:
+            logger.info("dry-run finished")
+            return None
+
         logger.info("Job {} is initially in state {} of {} project".format(query_job.job_id, query_job.state,
                                                                            query_job.project))
 
@@ -113,6 +117,9 @@ class BigqueryService(BaseBigqueryService):
 
         if self.on_job_finish is not None:
             self.on_job_finish(query_job)
+
+        logger.info(result)
+        logger.info("finished")
         return result
 
     def transform_load(self,
@@ -146,6 +153,10 @@ class BigqueryService(BaseBigqueryService):
         query_job = self.client.query(query=query,
                                       job_config=query_job_config,
                                       retry=self.retry)
+        if dry_run:
+            logger.info("dry-run finished")
+            return None
+
         logger.info("Job {} is initially in state {} of {} project".format(query_job.job_id, query_job.state,
                                                                            query_job.project))
 
@@ -168,6 +179,9 @@ class BigqueryService(BaseBigqueryService):
 
         if self.on_job_finish is not None:
             self.on_job_finish(query_job)
+
+        logger.info(result)
+        logger.info("finished")
         return result
 
     def create_table(self, full_table_name, schema_file,

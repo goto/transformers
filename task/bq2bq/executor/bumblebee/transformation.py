@@ -190,13 +190,7 @@ class DMLBasedTransformation:
             query = query.apply_parameter(parameter)
         query.print_with_logger(logger)
 
-        result = self.loader.load(query, dry_run=self.dry_run)
-        logger.info(result)
-
-        if not self.dry_run:
-            logger.info("finished")
-        else:
-            logger.info("dry-run finished")
+        self.loader.load(query, dry_run=self.dry_run)
 
 class TableTransformation:
     """
@@ -291,13 +285,7 @@ class PartitionTransformation:
         logger.info("start transformation job")
         self.query.print_with_logger(logger)
 
-        result = self.loader.load(self.query, dry_run=self.dry_run)
-        logger.info(result)
-
-        if not self.dry_run:
-            logger.info("finished")
-        else:
-            logger.info("dry-run finished")
+        self.loader.load(self.query, dry_run=self.dry_run)
 
     async def async_execute(self):
         self.execute()
@@ -354,12 +342,8 @@ class MergeReplaceTransformation:
 
 
         result = self.loader.load(query, dry_run=self.dry_run)
-        logger.info(result)
-
-        if not self.dry_run:
-            logger.info("finished {}".format(result.total_rows))
-        else:
-            logger.info("dry-run finished")
+        if not self.dry_run and result:
+            logger.info("total rows: {}".format(result.total_rows))
 
 
 class MultiPartitionTransformation:
@@ -515,9 +499,7 @@ class SpilloverDatetimes:
             destination_parameter)
         query.print()
 
-        results = None
-        if not self.dry_run:
-            results = self.bigquery_service.execute_query(query)
+        results = self.bigquery_service.execute_query(query)
 
         dates = [row[0] for row in results]
         datetimes = [datetime.combine(d, datetime.min.time()) for d in dates]
