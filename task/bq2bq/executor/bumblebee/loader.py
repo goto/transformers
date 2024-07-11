@@ -4,6 +4,7 @@ from datetime import datetime
 from abc import ABC
 from abc import abstractmethod
 from bumblebee.config import LoadMethod
+from bumblebee.bigquery_service import BigqueryService
 
 class BaseLoader(ABC):
 
@@ -14,7 +15,7 @@ class BaseLoader(ABC):
 
 class PartitionLoader(BaseLoader):
 
-    def __init__(self, bigquery_service, destination: str, load_method: LoadMethod, partition: datetime, allow_field_addition=False):
+    def __init__(self, bigquery_service: BigqueryService, destination: str, load_method: LoadMethod, partition: datetime, allow_field_addition=False):
         self.bigquery_service = bigquery_service
         self.destination_name = destination
         self.load_method = load_method
@@ -35,7 +36,7 @@ class PartitionLoader(BaseLoader):
 
 class TableLoader(BaseLoader):
 
-    def __init__(self, bigquery_service, destination: str, load_method: LoadMethod, allow_field_addition=False):
+    def __init__(self, bigquery_service: BigqueryService, destination: str, load_method: LoadMethod, allow_field_addition=False):
         self.bigquery_service = bigquery_service
         self.full_table_name = destination
         self.load_method = load_method
