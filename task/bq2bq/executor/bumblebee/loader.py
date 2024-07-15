@@ -4,6 +4,7 @@ from datetime import datetime
 from abc import ABC
 from abc import abstractmethod
 from bumblebee.config import LoadMethod
+from bumblebee.bigquery_service import BigqueryService
 
 class BaseLoader(ABC):
 
@@ -14,14 +15,14 @@ class BaseLoader(ABC):
 
 class PartitionLoader(BaseLoader):
 
-    def __init__(self, bigquery_service, destination: str, load_method: LoadMethod, partition: datetime, allow_field_addition=False):
+    def __init__(self, bigquery_service: BigqueryService, destination: str, load_method: LoadMethod, partition: datetime, allow_field_addition=False):
         self.bigquery_service = bigquery_service
         self.destination_name = destination
         self.load_method = load_method
         self.partition_date = partition
         self.allow_field_addition = allow_field_addition
 
-    def load(self, query):
+    def load(self, query, dry_run=False):
         partition_date_str = self.partition_date.strftime("%Y%m%d")
         load_destination = "{}${}".format(self.destination_name, partition_date_str)
         write_disposition = self.load_method.write_disposition
@@ -29,21 +30,23 @@ class PartitionLoader(BaseLoader):
         return self.bigquery_service.transform_load(query=query,
                                                     write_disposition=write_disposition,
                                                     destination_table=load_destination,
+                                                    dry_run = dry_run,
                                                     allow_field_addition=allow_field_addition)
 
 
 class TableLoader(BaseLoader):
 
-    def __init__(self, bigquery_service, destination: str, load_method: LoadMethod, allow_field_addition=False):
+    def __init__(self, bigquery_service: BigqueryService, destination: str, load_method: LoadMethod, allow_field_addition=False):
         self.bigquery_service = bigquery_service
         self.full_table_name = destination
         self.load_method = load_method
         self.allow_field_addition = allow_field_addition
 
-    def load(self, query):
+    def load(self, query, dry_run=False):
         return self.bigquery_service.transform_load(query=query,
                                                     write_disposition=self.load_method.write_disposition,
                                                     destination_table=self.full_table_name,
+                                                    dry_run = dry_run,
                                                     allow_field_addition=self.allow_field_addition)
 
 
@@ -52,5 +55,5 @@ class DMLLoader(BaseLoader):
         self.bigquery_service = bigquery_service
         self.full_table_name = destination
 
-    def load(self,query):
-        return self.bigquery_service.execute_query(query)
+    def load(self,query, dry_run=False):
+        return self.bigquery_service.execute_query(query, dry_run=dry_run)
