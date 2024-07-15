@@ -37,10 +37,7 @@ def bq2bq(properties_file: str,
     else:
         task_config = TaskConfigFromEnv()
 
-    bigquery_service = DummyService()
-    if not dry_run:
-        bigquery_service = create_bigquery_service(task_config, job_labels, writer, on_job_finish=on_job_finish, on_job_register=on_job_register)
-
+    bigquery_service = create_bigquery_service(task_config, job_labels, writer, on_job_finish=on_job_finish, on_job_register=on_job_register)
     transformation = Transformation(bigquery_service,
                                     task_config,
                                     task_files.query,
