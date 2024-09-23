@@ -32,8 +32,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: ./bq2bq.Dockerfile  # Path to the Dockerfile
+          context: ./bq2bq
           platforms: linux/amd64  # Specify the target platforms
           push: true
           tags: |
