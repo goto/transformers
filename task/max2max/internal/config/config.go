@@ -1,6 +1,8 @@
 package config
 
 import (
+	"encoding/json"
+
 	"github.com/aliyun/aliyun-odps-go-sdk/odps"
 )
 
@@ -12,7 +14,14 @@ type Config struct {
 	DestinationTableID string
 }
 
-func NewConfig() *Config {
+type maxComputeCredentials struct {
+	AccessId    string `json:"access_id"`
+	AccessKey   string `json:"access_key"`
+	Endpoint    string `json:"endpoint"`
+	ProjectName string `json:"project_name"`
+}
+
+func NewConfig() (*Config, error) {
 	cfg := &Config{
 		Config: odps.NewConfig(),
 		// max2max related config
@@ -22,11 +31,26 @@ func NewConfig() *Config {
 		DestinationTableID: getEnv("DESTINATION_TABLE_ID", ""),
 	}
 	// ali-odps-go-sdk related config
-	cfg.Config.AccessId = getEnv("ACCESS_ID", "")
-	cfg.Config.AccessKey = getEnv("ACCESS_KEY", "")
-	cfg.Config.Endpoint = getEnv("ENDPOINT", "http://service.ap-southeast-5.maxcompute.aliyun.com/api")
-	cfg.Config.ProjectName = getEnv("PROJECT", "")
-	cfg.Config.HttpTimeout = getEnvDuration("HTTP_TIMEOUT", "10s")
+	scvAcc := getEnv("SERVICE_ACCOUNT", "")
+	cred, err := collectMaxComputeCredential([]byte(scvAcc))
+	if err != nil {
+		return nil, err
+	}
+	cfg.Config.AccessId = cred.AccessId
+	cfg.Config.AccessKey = cred.AccessKey
+	cfg.Config.Endpoint = cred.Endpoint
+	cfg.Config.ProjectName = cred.ProjectName
+	cfg.Config.HttpTimeout = getEnvDuration("MAXCOMPUTE_HTTP_TIMEOUT", "10s")
+	cfg.Config.TcpConnectionTimeout = getEnvDuration("MAXCOMPUTE_TCP_TIMEOUT", "30s")
 
-	return cfg
+	return cfg, nil
+}
+
+func collectMaxComputeCredential(scvAcc []byte) (*maxComputeCredentials, error) {
+	var creds maxComputeCredentials
+	if err := json.Unmarshal(scvAcc, &creds); err != nil {
+		return nil, err
+	}
+
+	return &creds, nil
 }

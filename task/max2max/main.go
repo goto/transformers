@@ -14,7 +14,10 @@ import (
 // - instrumentation
 func main() {
 	// load config
-	cfg := config.NewConfig()
+	cfg, err := config.NewConfig()
+	if err != nil {
+		panic(err)
+	}
 
 	// initiate dependencies
 	logger, err := logger.NewLogger(cfg.LogLevel)
