@@ -8,19 +8,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  binary_bq2bq:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-      - name: Set up Golang
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.20'
-      - name: test binary bq2bq
-        run: make test
   executor_bq2bq:
     runs-on: ubuntu-latest
     steps:
@@ -34,6 +21,6 @@ jobs:
           python-version: '3.8'
       - name: test executor
         run: |
-          cd ./task/bq2bq/executor
+          cd ./bq2bq
           chmod +x ./run_coverage.sh
           ./run_coverage.sh
