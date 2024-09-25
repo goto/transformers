@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'bq2bq/v*'
+      - 'max2max/v*'
 
 jobs:
   bq2bq:
@@ -38,5 +39,50 @@ jobs:
           tags: |
             docker.io/gotocompany/optimus-task-bq2bq-executor:latest
             docker.io/gotocompany/optimus-task-bq2bq-executor:${{ steps.vars.outputs.tag }}
+      - name: Log out from Docker Hub
+        run: docker logout
+  max2max:
+    if: startsWith(github.ref, 'refs/tags/max2max/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.22
+      # Build the Go binary
+      - name: Build
+        run: |
+          cd max2max
+          mkdir build
+          go get .
+          env GOOS=linux GOARCH=amd64 go build -o ./build/max2max .
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      # Extract the Git tag version
+      - name: Extract tag version
+        id: vars
+        run: |
+          # Extract the tag name from GITHUB_REF, remove 'refs/tags/max2max/' prefix
+          TAG="${GITHUB_REF#refs/tags/max2max/}"
+          echo "Tag name: $TAG"
+          echo "::set-output name=tag::$TAG"
+      # Build and push the Docker image to Docker Hub
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./max2max
+          platforms: linux/amd64  # Specify the target platforms
+          push: true
+          tags: |
+            docker.io/gotocompany/max2max:latest
+            docker.io/gotocompany/max2max:${{ steps.vars.outputs.tag }}
       - name: Log out from Docker Hub
         run: docker logout
