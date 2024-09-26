@@ -17,3 +17,7 @@ func NewMergeLoader(logger *slog.Logger) *mergeLoader {
 func (l *mergeLoader) GetQuery(tableID, query string) string {
 	return "-- TODO merge loader"
 }
+
+func (l *mergeLoader) GetPartitionedQuery(tableID, partitionName, query string) string {
+	return "-- TODO merge loader"
+}
