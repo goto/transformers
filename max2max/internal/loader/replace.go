@@ -17,3 +17,7 @@ func NewReplaceLoader(logger *slog.Logger) *replaceLoader {
 func (l *replaceLoader) GetQuery(tableID, query string) string {
 	return "-- TODO replace loader"
 }
+
+func (l *replaceLoader) GetPartitionedQuery(tableID, query string, partitionName []string) string {
+	return "-- TODO replace loader"
+}

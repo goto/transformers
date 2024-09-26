@@ -1,12 +1,13 @@
 package loader
 
 import (
-	"errors"
+	"fmt"
 	"log/slog"
 )
 
 type Loader interface {
 	GetQuery(tableID, query string) string
+	GetPartitionedQuery(tableID, query string, partitionName []string) string
 }
 
 func GetLoader(name string, logger *slog.Logger) (Loader, error) {
@@ -22,6 +23,6 @@ func GetLoader(name string, logger *slog.Logger) (Loader, error) {
 	case MERGE_REPLACE:
 		return NewMergeReplaceLoader(logger), nil
 	default:
-		return nil, errors.New("loader not found")
+		return nil, fmt.Errorf("loader %s not found", name)
 	}
 }
