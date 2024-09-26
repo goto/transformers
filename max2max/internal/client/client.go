@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 
 	"github.com/aliyun/aliyun-odps-go-sdk/odps"
 )
 
 type Loader interface {
 	GetQuery(tableID, query string) string
-	GetPartitionedQuery(tableID, partitionName, query string) string
+	GetPartitionedQuery(tableID, query string, partitionName []string) string
 }
 
 type client struct {
@@ -35,16 +36,16 @@ func (c *client) Execute(loader Loader, tableID, queryFilePath string) error {
 
 	// check if table is partitioned
 	c.logger.Info(fmt.Sprintf("checking if table %s is partitioned", tableID))
-	partitionName, err := c.getPartitionName(tableID)
+	partitionNames, err := c.getPartitionNames(tableID)
 	if err != nil {
 		return err
 	}
 
 	// prepare query
 	queryToExec := loader.GetQuery(tableID, string(queryRaw))
-	if partitionName != "" {
-		c.logger.Info(fmt.Sprintf("table %s is partitioned by %s", tableID, partitionName))
-		queryToExec = loader.GetPartitionedQuery(tableID, partitionName, string(queryRaw))
+	if len(partitionNames) > 0 {
+		c.logger.Info(fmt.Sprintf("table %s is partitioned by %s", tableID, strings.Join(partitionNames, ", ")))
+		queryToExec = loader.GetPartitionedQuery(tableID, string(queryRaw), partitionNames)
 	}
 
 	// execute query with odps client
@@ -63,13 +64,14 @@ func (c *client) Execute(loader Loader, tableID, queryFilePath string) error {
 	return nil
 }
 
-func (c *client) getPartitionName(tableID string) (string, error) {
+func (c *client) getPartitionNames(tableID string) ([]string, error) {
 	table := c.odpsClient.Table(tableID)
 	if err := table.Load(); err != nil {
-		return "", err
+		return nil, err
 	}
-	if len(table.Schema().PartitionColumns) > 0 {
-		return table.Schema().PartitionColumns[0].Name, nil
+	var partitionNames []string
+	for _, partition := range table.Schema().PartitionColumns {
+		partitionNames = append(partitionNames, partition.Name)
 	}
-	return "", nil
+	return partitionNames, nil
 }

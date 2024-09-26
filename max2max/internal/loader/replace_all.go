@@ -18,6 +18,6 @@ func (l *replaceAllLoader) GetQuery(tableID, query string) string {
 	return "-- TODO replace all loader"
 }
 
-func (l *replaceAllLoader) GetPartitionedQuery(tableID, partitionName, query string) string {
+func (l *replaceAllLoader) GetPartitionedQuery(tableID, query string, partitionName []string) string {
 	return "-- TODO replace all loader"
 }

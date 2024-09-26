@@ -18,6 +18,6 @@ func (l *mergeLoader) GetQuery(tableID, query string) string {
 	return "-- TODO merge loader"
 }
 
-func (l *mergeLoader) GetPartitionedQuery(tableID, partitionName, query string) string {
+func (l *mergeLoader) GetPartitionedQuery(tableID, query string, partitionName []string) string {
 	return "-- TODO merge loader"
 }

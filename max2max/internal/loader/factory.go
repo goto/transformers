@@ -7,7 +7,7 @@ import (
 
 type Loader interface {
 	GetQuery(tableID, query string) string
-	GetPartitionedQuery(tableID, partitionName, query string) string
+	GetPartitionedQuery(tableID, query string, partitionName []string) string
 }
 
 func GetLoader(name string, logger *slog.Logger) (Loader, error) {
