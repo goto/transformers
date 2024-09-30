@@ -2,10 +2,10 @@ package main
 
 import (
 	_ "github.com/aliyun/aliyun-odps-go-sdk/sqldriver"
-	"github.com/goto/maxcompute-transformation/internal/client"
-	"github.com/goto/maxcompute-transformation/internal/config"
-	"github.com/goto/maxcompute-transformation/internal/loader"
-	"github.com/goto/maxcompute-transformation/internal/logger"
+	"github.com/goto/transformers/max2max/internal/client"
+	"github.com/goto/transformers/max2max/internal/config"
+	"github.com/goto/transformers/max2max/internal/loader"
+	"github.com/goto/transformers/max2max/internal/logger"
 )
 
 // TODO:

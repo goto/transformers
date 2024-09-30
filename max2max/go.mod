@@ -1,9 +1,9 @@
-module github.com/goto/maxcompute-transformation
+module github.com/goto/transformers/max2max
 
 go 1.22.3
 
 require (
-	github.com/aliyun/aliyun-odps-go-sdk v0.3.4
+	github.com/aliyun/aliyun-odps-go-sdk v0.3.5
 	github.com/stretchr/testify v1.9.0
 )
 

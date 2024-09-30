@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/goto/maxcompute-transformation/internal/client"
+	"github.com/goto/transformers/max2max/internal/client"
 	"github.com/stretchr/testify/assert"
 )
 
