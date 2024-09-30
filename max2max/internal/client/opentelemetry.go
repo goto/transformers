@@ -12,7 +12,10 @@ import (
 
 func setupOTelSDK(collectorGRPCEndpoint string, jobName, scheduledTime string) (shutdown func() error, err error) {
 	ctx := context.Background() // TODO: use context from main
-	metricExporter, err := otlpmetricgrpc.New(ctx, otlpmetricgrpc.WithEndpoint(collectorGRPCEndpoint))
+	metricExporter, err := otlpmetricgrpc.New(ctx,
+		otlpmetricgrpc.WithEndpoint(collectorGRPCEndpoint),
+		otlpmetricgrpc.WithInsecure(),
+	)
 	if err != nil {
 		return nil, err
 	}
