@@ -30,7 +30,7 @@ func NewConfig() (*Config, error) {
 		// max2max related config
 		LogLevel:           getEnv("LOG_LEVEL", "INFO"),
 		LoadMethod:         getEnv("LOAD_METHOD", "APPEND"),
-		QueryFilePath:      getEnv("QUERY_FILE_PATH", ""),
+		QueryFilePath:      getEnv("QUERY_FILE_PATH", "/data/in/query.sql"),
 		DestinationTableID: getEnv("DESTINATION_TABLE_ID", ""),
 		// system related config
 		OtelCollectorGRPCEndpoint: getEnv("OTEL_COLLECTOR_GRPC_ENDPOINT", ""),
