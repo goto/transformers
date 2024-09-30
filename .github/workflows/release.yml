@@ -60,7 +60,7 @@ jobs:
           cd max2max
           mkdir build
           go get .
-          env GOOS=linux GOARCH=amd64 go build -o ./build/max2max .
+          env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./build/max2max .
       - name: Login to DockerHub
         uses: docker/login-action@v1
         with:
