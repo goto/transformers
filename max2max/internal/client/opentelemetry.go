@@ -10,8 +10,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-func setupOTelSDK(collectorGRPCEndpoint string, jobName, scheduledTime string) (shutdown func() error, err error) {
-	ctx := context.Background() // TODO: use context from main
+func setupOTelSDK(ctx context.Context, collectorGRPCEndpoint string, jobName, scheduledTime string) (shutdown func() error, err error) {
 	metricExporter, err := otlpmetricgrpc.New(ctx,
 		otlpmetricgrpc.WithEndpoint(collectorGRPCEndpoint),
 		otlpmetricgrpc.WithInsecure(),
@@ -33,6 +32,6 @@ func setupOTelSDK(collectorGRPCEndpoint string, jobName, scheduledTime string) (
 	otel.SetMeterProvider(meterProvider)
 
 	return func() error {
-		return meterProvider.Shutdown(ctx)
+		return meterProvider.Shutdown(context.Background())
 	}, nil
 }

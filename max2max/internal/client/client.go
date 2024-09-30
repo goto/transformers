@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -14,19 +15,22 @@ type Loader interface {
 }
 
 type OdpsClient interface {
-	GetPartitionNames(tableID string) ([]string, error)
-	ExecSQL(query string) error
+	GetPartitionNames(ctx context.Context, tableID string) ([]string, error)
+	ExecSQL(ctx context.Context, query string) error
 }
 
 type Client struct {
 	OdpsClient OdpsClient
+	Loader     Loader
 
+	appCtx      context.Context
 	logger      *slog.Logger
 	shutdownFns []func() error
 }
 
-func NewClient(setupFns ...SetupFn) (*Client, error) {
+func NewClient(ctx context.Context, setupFns ...SetupFn) (*Client, error) {
 	c := &Client{
+		appCtx:      ctx,
 		shutdownFns: make([]func() error, 0),
 	}
 	for _, setupFn := range setupFns {
@@ -38,6 +42,7 @@ func NewClient(setupFns ...SetupFn) (*Client, error) {
 }
 
 func (c *Client) Close() error {
+	c.logger.Info("closing client")
 	var err error
 	for _, fn := range c.shutdownFns {
 		err = errors.Join(err, fn())
@@ -45,7 +50,7 @@ func (c *Client) Close() error {
 	return err
 }
 
-func (c *Client) Execute(loader Loader, tableID, queryFilePath string) error {
+func (c *Client) Execute(ctx context.Context, tableID, queryFilePath string) error {
 	// read query from filepath
 	c.logger.Info(fmt.Sprintf("executing query from %s", queryFilePath))
 	queryRaw, err := os.ReadFile(queryFilePath)
@@ -54,22 +59,21 @@ func (c *Client) Execute(loader Loader, tableID, queryFilePath string) error {
 	}
 
 	// check if table is partitioned
-	c.logger.Info(fmt.Sprintf("checking if table %s is partitioned", tableID))
-	partitionNames, err := c.OdpsClient.GetPartitionNames(tableID)
+	partitionNames, err := c.OdpsClient.GetPartitionNames(ctx, tableID)
 	if err != nil {
 		return err
 	}
 
 	// prepare query
-	queryToExec := loader.GetQuery(tableID, string(queryRaw))
+	queryToExec := c.Loader.GetQuery(tableID, string(queryRaw))
 	if len(partitionNames) > 0 {
 		c.logger.Info(fmt.Sprintf("table %s is partitioned by %s", tableID, strings.Join(partitionNames, ", ")))
-		queryToExec = loader.GetPartitionedQuery(tableID, string(queryRaw), partitionNames)
+		queryToExec = c.Loader.GetPartitionedQuery(tableID, string(queryRaw), partitionNames)
 	}
 
 	// execute query with odps client
 	c.logger.Info(fmt.Sprintf("execute: %s", queryToExec))
-	if err := c.OdpsClient.ExecSQL(queryToExec); err != nil {
+	if err := c.OdpsClient.ExecSQL(ctx, queryToExec); err != nil {
 		return err
 	}
 
