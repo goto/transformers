@@ -11,7 +11,6 @@ import (
 // TODO:
 // - graceful shutdown
 // - error handling
-// - instrumentation
 func main() {
 	// load config
 	cfg, err := config.NewConfig()

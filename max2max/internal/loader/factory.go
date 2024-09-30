@@ -13,7 +13,7 @@ type Loader interface {
 func GetLoader(name string, logger *slog.Logger) (Loader, error) {
 	switch name {
 	case APPEND:
-		return NewAppendLoader(logger), nil
+		return NewAppendLoader(logger)
 	// case REPLACE:
 	// 	return NewReplaceLoader(logger), nil
 	// case REPLACE_ALL:
