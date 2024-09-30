@@ -19,6 +19,7 @@ func NewODPSClient(client *odps.Odps) *odpsClient {
 }
 
 // ExecSQL executes the given query in syncronous mode (blocking)
+// TODO: change the execution mode to async and do graceful shutdown
 func (c *odpsClient) ExecSQL(query string) error {
 	taskIns, err := c.client.ExecSQl(query)
 	if err != nil {

@@ -8,10 +8,11 @@ import (
 
 type Config struct {
 	*odps.Config
-	LogLevel           string
-	LoadMethod         string
-	QueryFilePath      string
-	DestinationTableID string
+	LogLevel                  string
+	LoadMethod                string
+	QueryFilePath             string
+	DestinationTableID        string
+	OtelCollectorGRPCEndpoint string
 }
 
 type maxComputeCredentials struct {
@@ -29,6 +30,8 @@ func NewConfig() (*Config, error) {
 		LoadMethod:         getEnv("LOAD_METHOD", "APPEND"),
 		QueryFilePath:      getEnv("QUERY_FILE_PATH", ""),
 		DestinationTableID: getEnv("DESTINATION_TABLE_ID", ""),
+		// system related config
+		OtelCollectorGRPCEndpoint: getEnv("OTEL_COLLECTOR_GRPC_ENDPOINT", ""),
 	}
 	// ali-odps-go-sdk related config
 	scvAcc := getEnv("SERVICE_ACCOUNT", "")

@@ -2,27 +2,29 @@ package client_test
 
 import (
 	"fmt"
-	"log/slog"
 	"os"
 	"testing"
 
 	"github.com/goto/transformers/max2max/internal/client"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestExecute(t *testing.T) {
 	t.Run("should return error when reading query file fails", func(t *testing.T) {
 		// arrange
-		client := client.NewClient(slog.Default(), nil)
+		client, err := client.NewClient(client.SetupLogger("error"))
+		require.NoError(t, err)
 		client.OdpsClient = &mockOdpsClient{}
 		// act
-		err := client.Execute(nil, "", "./nonexistentfile")
+		err = client.Execute(nil, "", "./nonexistentfile")
 		// assert
 		assert.Error(t, err)
 	})
 	t.Run("should return error when getting partition name fails", func(t *testing.T) {
 		// arrange
-		client := client.NewClient(slog.Default(), nil)
+		client, err := client.NewClient(client.SetupLogger("error"))
+		require.NoError(t, err)
 		client.OdpsClient = &mockOdpsClient{
 			partitionResult: func() ([]string, error) {
 				return nil, fmt.Errorf("error get partition name")
@@ -30,14 +32,15 @@ func TestExecute(t *testing.T) {
 		}
 		assert.NoError(t, os.WriteFile("/tmp/query.sql", []byte("SELECT * FROM table;"), 0644))
 		// act
-		err := client.Execute(nil, "project_test.table_test", "/tmp/query.sql")
+		err = client.Execute(nil, "project_test.table_test", "/tmp/query.sql")
 		// assert
 		assert.Error(t, err)
 		assert.ErrorContains(t, err, "error get partition name")
 	})
 	t.Run("should return error when executing query fails", func(t *testing.T) {
 		// arrange
-		client := client.NewClient(slog.Default(), nil)
+		client, err := client.NewClient(client.SetupLogger("error"))
+		require.NoError(t, err)
 		client.OdpsClient = &mockOdpsClient{
 			partitionResult: func() ([]string, error) {
 				return nil, nil
@@ -51,16 +54,17 @@ func TestExecute(t *testing.T) {
 				return "INSERT INTO table SELECT * FROM table;"
 			},
 		}
-		assert.NoError(t, os.WriteFile("/tmp/query.sql", []byte("SELECT * FROM table;"), 0644))
+		require.NoError(t, os.WriteFile("/tmp/query.sql", []byte("SELECT * FROM table;"), 0644))
 		// act
-		err := client.Execute(loader, "project_test.table_test", "/tmp/query.sql")
+		err = client.Execute(loader, "project_test.table_test", "/tmp/query.sql")
 		// assert
 		assert.Error(t, err)
 		assert.ErrorContains(t, err, "error exec sql")
 	})
 	t.Run("should return nil when everything is successful", func(t *testing.T) {
 		// arrange
-		client := client.NewClient(slog.Default(), nil)
+		client, err := client.NewClient(client.SetupLogger("error"))
+		require.NoError(t, err)
 		client.OdpsClient = &mockOdpsClient{
 			partitionResult: func() ([]string, error) {
 				return []string{"event_date"}, nil
@@ -77,9 +81,9 @@ func TestExecute(t *testing.T) {
 				return "INSERT INTO table PARTITION (event_date) SELECT * FROM table;"
 			},
 		}
-		assert.NoError(t, os.WriteFile("/tmp/query.sql", []byte("SELECT * FROM table;"), 0644))
+		require.NoError(t, os.WriteFile("/tmp/query.sql", []byte("SELECT * FROM table;"), 0644))
 		// act
-		err := client.Execute(loader, "project_test.table_test", "/tmp/query.sql")
+		err = client.Execute(loader, "project_test.table_test", "/tmp/query.sql")
 		// assert
 		assert.NoError(t, err)
 	})

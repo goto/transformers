@@ -29,7 +29,14 @@ func main() {
 		panic(err)
 	}
 	// initiate client
-	client := client.NewClient(logger, cfg.GenOdps())
+	client, err := client.NewClient(
+		client.SetupLogger(cfg.LogLevel),
+		client.SetupOTelSDK(cfg.OtelCollectorGRPCEndpoint),
+		client.SetupODPSClient(cfg.GenOdps()),
+	)
+	if err != nil {
+		panic(err)
+	}
 	defer client.Close()
 
 	// execute query

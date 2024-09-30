@@ -1,12 +1,11 @@
 package client
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
 	"strings"
-
-	"github.com/aliyun/aliyun-odps-go-sdk/odps"
 )
 
 type Loader interface {
@@ -20,15 +19,30 @@ type OdpsClient interface {
 }
 
 type Client struct {
-	logger     *slog.Logger
 	OdpsClient OdpsClient
+
+	logger      *slog.Logger
+	shutdownFns []func() error
 }
 
-func NewClient(logger *slog.Logger, odpsClient *odps.Odps) *Client {
-	return &Client{
-		logger:     logger,
-		OdpsClient: NewODPSClient(odpsClient),
+func NewClient(setupFns ...SetupFn) (*Client, error) {
+	c := &Client{
+		shutdownFns: make([]func() error, 0),
 	}
+	for _, setupFn := range setupFns {
+		if err := setupFn(c); err != nil {
+			return nil, err
+		}
+	}
+	return c, nil
+}
+
+func (c *Client) Close() error {
+	var err error
+	for _, fn := range c.shutdownFns {
+		err = errors.Join(err, fn())
+	}
+	return err
 }
 
 func (c *Client) Execute(loader Loader, tableID, queryFilePath string) error {
@@ -61,8 +75,4 @@ func (c *Client) Execute(loader Loader, tableID, queryFilePath string) error {
 
 	c.logger.Info("execution done")
 	return nil
-}
-
-func (c *Client) Close() {
-	// any cleanup
 }
