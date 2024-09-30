@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
@@ -16,7 +17,7 @@ func setupOTelSDK(ctx context.Context, collectorGRPCEndpoint string, jobName, sc
 		otlpmetricgrpc.WithInsecure(),
 	)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	// for now, we only need metric provider

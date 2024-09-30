@@ -2,11 +2,12 @@ package client
 
 import (
 	"context"
-	"errors"
+	e "errors"
 	"fmt"
 	"log/slog"
 
 	"github.com/aliyun/aliyun-odps-go-sdk/odps"
+	"github.com/pkg/errors"
 )
 
 type odpsClient struct {
@@ -28,13 +29,13 @@ func NewODPSClient(logger *slog.Logger, client *odps.Odps) *odpsClient {
 func (c *odpsClient) ExecSQL(ctx context.Context, query string) error {
 	taskIns, err := c.client.ExecSQl(query)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	// generate log view
 	url, err := odps.NewLogView(c.client).GenerateLogView(taskIns, 1)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	c.logger.Info(fmt.Sprintf("log view: %s", url))
 
@@ -44,9 +45,9 @@ func (c *odpsClient) ExecSQL(ctx context.Context, query string) error {
 	case <-ctx.Done():
 		c.logger.Info("context cancelled, terminating task instance")
 		err := taskIns.Terminate()
-		return errors.Join(ctx.Err(), err)
+		return e.Join(ctx.Err(), err)
 	case err := <-wait(taskIns):
-		return err
+		return errors.WithStack(err)
 	}
 }
 
@@ -55,7 +56,7 @@ func (c *odpsClient) ExecSQL(ctx context.Context, query string) error {
 func (c *odpsClient) GetPartitionNames(_ context.Context, tableID string) ([]string, error) {
 	table := c.client.Table(tableID)
 	if err := table.Load(); err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	var partitionNames []string
 	for _, partition := range table.Schema().PartitionColumns {
@@ -69,7 +70,8 @@ func wait(taskIns *odps.Instance) <-chan error {
 	errChan := make(chan error)
 	go func(errChan chan<- error) {
 		defer close(errChan)
-		errChan <- taskIns.WaitForSuccess()
+		err := taskIns.WaitForSuccess()
+		errChan <- errors.WithStack(err)
 	}(errChan)
 	return errChan
 }

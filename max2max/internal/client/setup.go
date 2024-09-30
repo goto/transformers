@@ -4,6 +4,7 @@ import (
 	"github.com/aliyun/aliyun-odps-go-sdk/odps"
 	"github.com/goto/transformers/max2max/internal/loader"
 	"github.com/goto/transformers/max2max/internal/logger"
+	"github.com/pkg/errors"
 )
 
 type SetupFn func(c *Client) error
@@ -12,7 +13,7 @@ func SetupLogger(logLevel string) SetupFn {
 	return func(c *Client) error {
 		logger, err := logger.NewLogger(logLevel)
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		c.logger = logger
 		return nil
@@ -33,7 +34,7 @@ func SetupOTelSDK(collectorGRPCEndpoint, jobName, scheduledTime string) SetupFn 
 		}
 		shutdownFn, err := setupOTelSDK(c.appCtx, collectorGRPCEndpoint, jobName, scheduledTime)
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		c.shutdownFns = append(c.shutdownFns, shutdownFn)
 		return nil
@@ -44,7 +45,7 @@ func SetupLoader(loadMethod string) SetupFn {
 	return func(c *Client) error {
 		loader, err := loader.GetLoader(loadMethod, c.logger)
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		c.Loader = loader
 		return nil

@@ -2,11 +2,13 @@ package client
 
 import (
 	"context"
-	"errors"
+	e "errors"
 	"fmt"
 	"log/slog"
 	"os"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 type Loader interface {
@@ -35,7 +37,7 @@ func NewClient(ctx context.Context, setupFns ...SetupFn) (*Client, error) {
 	}
 	for _, setupFn := range setupFns {
 		if err := setupFn(c); err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 	}
 	return c, nil
@@ -45,9 +47,9 @@ func (c *Client) Close() error {
 	c.logger.Info("closing client")
 	var err error
 	for _, fn := range c.shutdownFns {
-		err = errors.Join(err, fn())
+		err = e.Join(err, fn())
 	}
-	return err
+	return errors.WithStack(err)
 }
 
 func (c *Client) Execute(ctx context.Context, tableID, queryFilePath string) error {
@@ -55,13 +57,13 @@ func (c *Client) Execute(ctx context.Context, tableID, queryFilePath string) err
 	c.logger.Info(fmt.Sprintf("executing query from %s", queryFilePath))
 	queryRaw, err := os.ReadFile(queryFilePath)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	// check if table is partitioned
 	partitionNames, err := c.OdpsClient.GetPartitionNames(ctx, tableID)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	// prepare query
@@ -74,9 +76,9 @@ func (c *Client) Execute(ctx context.Context, tableID, queryFilePath string) err
 	// execute query with odps client
 	c.logger.Info(fmt.Sprintf("execute: %s", queryToExec))
 	if err := c.OdpsClient.ExecSQL(ctx, queryToExec); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	c.logger.Info("execution done")
-	return nil
+	return errors.WithStack(err)
 }
