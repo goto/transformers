@@ -20,7 +20,7 @@ func SetupLogger(logLevel string) SetupFn {
 
 func SetupODPSClient(odpsClient *odps.Odps) SetupFn {
 	return func(c *Client) error {
-		c.OdpsClient = NewODPSClient(odpsClient)
+		c.OdpsClient = NewODPSClient(c.logger, odpsClient)
 		return nil
 	}
 }

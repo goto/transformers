@@ -12,8 +12,9 @@ type odpsClient struct {
 	client *odps.Odps
 }
 
-func NewODPSClient(client *odps.Odps) *odpsClient {
+func NewODPSClient(logger *slog.Logger, client *odps.Odps) *odpsClient {
 	return &odpsClient{
+		logger: logger,
 		client: client,
 	}
 }
