@@ -25,8 +25,9 @@ jobs:
       - name: Extract tag version
         id: vars
         run: |
-          # Extract the tag name from GITHUB_REF, remove 'refs/tags/bq2bq/' prefix
+          # Extract the tag name from GITHUB_REF, remove 'refs/tags/bq2bq/v' prefix
           TAG="${GITHUB_REF#refs/tags/bq2bq/}"
+          TAG="${TAG#v}"
           echo "Tag name: $TAG"
           echo "::set-output name=tag::$TAG"
       # Build and push the Docker image to Docker Hub
@@ -70,8 +71,9 @@ jobs:
       - name: Extract tag version
         id: vars
         run: |
-          # Extract the tag name from GITHUB_REF, remove 'refs/tags/max2max/' prefix
+          # Extract the tag name from GITHUB_REF, remove 'refs/tags/max2max/v' prefix
           TAG="${GITHUB_REF#refs/tags/max2max/}"
+          TAG="${TAG#v}"
           echo "Tag name: $TAG"
           echo "::set-output name=tag::$TAG"
       # Build and push the Docker image to Docker Hub

@@ -10,10 +10,10 @@ type appendLoader struct {
 	logger *slog.Logger
 }
 
-func NewAppendLoader(logger *slog.Logger) *appendLoader {
+func NewAppendLoader(logger *slog.Logger) (*appendLoader, error) {
 	return &appendLoader{
 		logger: logger,
-	}
+	}, nil
 }
 
 func (l *appendLoader) GetQuery(tableID, query string) string {

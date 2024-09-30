@@ -2,16 +2,15 @@ package main
 
 import (
 	_ "github.com/aliyun/aliyun-odps-go-sdk/sqldriver"
-	"github.com/goto/maxcompute-transformation/internal/client"
-	"github.com/goto/maxcompute-transformation/internal/config"
-	"github.com/goto/maxcompute-transformation/internal/loader"
-	"github.com/goto/maxcompute-transformation/internal/logger"
+	"github.com/goto/transformers/max2max/internal/client"
+	"github.com/goto/transformers/max2max/internal/config"
+	"github.com/goto/transformers/max2max/internal/loader"
+	"github.com/goto/transformers/max2max/internal/logger"
 )
 
 // TODO:
 // - graceful shutdown
 // - error handling
-// - instrumentation
 func main() {
 	// load config
 	cfg, err := config.NewConfig()
@@ -29,7 +28,15 @@ func main() {
 		panic(err)
 	}
 	// initiate client
-	client := client.NewClient(logger, cfg.GenOdps())
+	client, err := client.NewClient(
+		client.SetupLogger(cfg.LogLevel),
+		client.SetupOTelSDK(cfg.OtelCollectorGRPCEndpoint, cfg.JobName, cfg.ScheduledTime),
+		client.SetupODPSClient(cfg.GenOdps()),
+	)
+	if err != nil {
+		panic(err)
+	}
+	defer client.Close()
 
 	// execute query
 	err = client.Execute(loader, cfg.DestinationTableID, cfg.QueryFilePath)
