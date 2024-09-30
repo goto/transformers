@@ -62,3 +62,7 @@ func (c *Client) Execute(loader Loader, tableID, queryFilePath string) error {
 	c.logger.Info("execution done")
 	return nil
 }
+
+func (c *Client) Close() {
+	// any cleanup
+}

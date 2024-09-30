@@ -30,6 +30,7 @@ func main() {
 	}
 	// initiate client
 	client := client.NewClient(logger, cfg.GenOdps())
+	defer client.Close()
 
 	// execute query
 	err = client.Execute(loader, cfg.DestinationTableID, cfg.QueryFilePath)
