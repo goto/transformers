@@ -14,19 +14,24 @@ type Loader interface {
 	GetPartitionedQuery(tableID, query string, partitionName []string) string
 }
 
-type client struct {
-	logger     *slog.Logger
-	odpsClient *odps.Odps
+type OdpsClient interface {
+	GetPartitionNames(tableID string) ([]string, error)
+	ExecSQL(query string) error
 }
 
-func NewClient(logger *slog.Logger, odpsClient *odps.Odps) *client {
-	return &client{
+type Client struct {
+	logger     *slog.Logger
+	OdpsClient OdpsClient
+}
+
+func NewClient(logger *slog.Logger, odpsClient *odps.Odps) *Client {
+	return &Client{
 		logger:     logger,
-		odpsClient: odpsClient,
+		OdpsClient: NewODPSClient(odpsClient),
 	}
 }
 
-func (c *client) Execute(loader Loader, tableID, queryFilePath string) error {
+func (c *Client) Execute(loader Loader, tableID, queryFilePath string) error {
 	// read query from filepath
 	c.logger.Info(fmt.Sprintf("executing query from %s", queryFilePath))
 	queryRaw, err := os.ReadFile(queryFilePath)
@@ -36,7 +41,7 @@ func (c *client) Execute(loader Loader, tableID, queryFilePath string) error {
 
 	// check if table is partitioned
 	c.logger.Info(fmt.Sprintf("checking if table %s is partitioned", tableID))
-	partitionNames, err := c.getPartitionNames(tableID)
+	partitionNames, err := c.OdpsClient.GetPartitionNames(tableID)
 	if err != nil {
 		return err
 	}
@@ -50,28 +55,10 @@ func (c *client) Execute(loader Loader, tableID, queryFilePath string) error {
 
 	// execute query with odps client
 	c.logger.Info(fmt.Sprintf("execute: %s", queryToExec))
-	taskIns, err := c.odpsClient.ExecSQl(queryToExec)
-	if err != nil {
+	if err := c.OdpsClient.ExecSQL(queryToExec); err != nil {
 		return err
 	}
 
-	// wait execution success
-	c.logger.Info(fmt.Sprintf("taskId: %s", taskIns.Id()))
-	if err := taskIns.WaitForSuccess(); err != nil {
-		return err
-	}
 	c.logger.Info("execution done")
 	return nil
-}
-
-func (c *client) getPartitionNames(tableID string) ([]string, error) {
-	table := c.odpsClient.Table(tableID)
-	if err := table.Load(); err != nil {
-		return nil, err
-	}
-	var partitionNames []string
-	for _, partition := range table.Schema().PartitionColumns {
-		partitionNames = append(partitionNames, partition.Name)
-	}
-	return partitionNames, nil
 }
