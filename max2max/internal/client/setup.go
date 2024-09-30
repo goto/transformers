@@ -25,12 +25,12 @@ func SetupODPSClient(odpsClient *odps.Odps) SetupFn {
 	}
 }
 
-func SetupOTelSDK(collectorGRPCEndpoint string) SetupFn {
+func SetupOTelSDK(collectorGRPCEndpoint, jobName, scheduledTime string) SetupFn {
 	return func(c *Client) error {
 		if collectorGRPCEndpoint == "" {
 			return nil
 		}
-		shutdownFn, err := setupOTelSDK(collectorGRPCEndpoint)
+		shutdownFn, err := setupOTelSDK(collectorGRPCEndpoint, jobName, scheduledTime)
 		if err != nil {
 			return err
 		}

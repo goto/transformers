@@ -30,7 +30,7 @@ func main() {
 	// initiate client
 	client, err := client.NewClient(
 		client.SetupLogger(cfg.LogLevel),
-		client.SetupOTelSDK(cfg.OtelCollectorGRPCEndpoint),
+		client.SetupOTelSDK(cfg.OtelCollectorGRPCEndpoint, cfg.JobName, cfg.ScheduledTime),
 		client.SetupODPSClient(cfg.GenOdps()),
 	)
 	if err != nil {

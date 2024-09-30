@@ -13,6 +13,8 @@ type Config struct {
 	QueryFilePath             string
 	DestinationTableID        string
 	OtelCollectorGRPCEndpoint string
+	JobName                   string
+	ScheduledTime             string
 }
 
 type maxComputeCredentials struct {
@@ -32,6 +34,8 @@ func NewConfig() (*Config, error) {
 		DestinationTableID: getEnv("DESTINATION_TABLE_ID", ""),
 		// system related config
 		OtelCollectorGRPCEndpoint: getEnv("OTEL_COLLECTOR_GRPC_ENDPOINT", ""),
+		JobName:                   getJobName(),
+		ScheduledTime:             getEnv("SCHEDULED_TIME", ""),
 	}
 	// ali-odps-go-sdk related config
 	scvAcc := getEnv("SERVICE_ACCOUNT", "")

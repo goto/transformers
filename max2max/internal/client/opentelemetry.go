@@ -4,12 +4,13 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-func setupOTelSDK(collectorGRPCEndpoint string) (shutdown func() error, err error) {
+func setupOTelSDK(collectorGRPCEndpoint string, jobName, scheduledTime string) (shutdown func() error, err error) {
 	ctx := context.Background() // TODO: use context from main
 	metricExporter, err := otlpmetricgrpc.New(ctx, otlpmetricgrpc.WithEndpoint(collectorGRPCEndpoint))
 	if err != nil {
@@ -18,7 +19,12 @@ func setupOTelSDK(collectorGRPCEndpoint string) (shutdown func() error, err erro
 
 	// for now, we only need metric provider
 	meterProvider := metric.NewMeterProvider(
-		metric.WithResource(resource.Default()), // TODO: add resource specific to job name and plugin name
+		metric.WithResource(resource.NewWithAttributes(
+			resource.Default().SchemaURL(),
+			attribute.String("plugin.name", "max2max"),
+			attribute.String("job.name", jobName),
+			attribute.String("job.scheduled_time", scheduledTime),
+		)),
 		metric.WithReader(metric.NewPeriodicReader(metricExporter)),
 	)
 	otel.SetMeterProvider(meterProvider)
