@@ -1,4 +1,4 @@
-FROM amd64/alpine:3
+FROM alpine:3
 
 RUN apk --no-cache add tzdata
 COPY ./build/max2max /usr/local/bin/max2max
