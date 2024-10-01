@@ -18,10 +18,10 @@ func GetLoader(name string, logger *slog.Logger) (Loader, error) {
 	// 	return NewReplaceLoader(logger), nil
 	// case REPLACE_ALL:
 	// 	return NewReplaceAllLoader(logger), nil
-	// case MERGE:
-	// 	return NewMergeLoader(logger), nil
-	// case MERGE_REPLACE:
-	// 	return NewMergeReplaceLoader(logger), nil
+	case MERGE:
+		return NewMergeLoader(logger)
+	case MERGE_REPLACE:
+		return NewReplaceMergeLoader(logger)
 	default:
 		return nil, fmt.Errorf("loader %s not found", name)
 	}
