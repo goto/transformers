@@ -16,8 +16,8 @@ func GetLoader(name string, logger *slog.Logger) (Loader, error) {
 	switch name {
 	case APPEND:
 		return NewAppendLoader(logger)
-	// case REPLACE:
-	// 	return NewReplaceLoader(logger), nil
+	case REPLACE:
+		return NewReplaceLoader(logger)
 	// case REPLACE_ALL:
 	// 	return NewReplaceAllLoader(logger), nil
 	// case MERGE:
