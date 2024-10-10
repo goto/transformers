@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/aliyun/aliyun-odps-go-sdk/odps"
+	"github.com/pkg/errors"
 )
 
 type Config struct {
@@ -41,7 +42,7 @@ func NewConfig() (*Config, error) {
 	scvAcc := getEnv("SERVICE_ACCOUNT", "")
 	cred, err := collectMaxComputeCredential([]byte(scvAcc))
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	cfg.Config.AccessId = cred.AccessId
 	cfg.Config.AccessKey = cred.AccessKey
@@ -56,7 +57,7 @@ func NewConfig() (*Config, error) {
 func collectMaxComputeCredential(scvAcc []byte) (*maxComputeCredentials, error) {
 	var creds maxComputeCredentials
 	if err := json.Unmarshal(scvAcc, &creds); err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return &creds, nil
