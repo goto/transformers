@@ -1,7 +1,9 @@
 package loader
 
 import (
+	"fmt"
 	"log/slog"
+	"strings"
 )
 
 type replaceLoader struct {
@@ -15,9 +17,9 @@ func NewReplaceLoader(logger *slog.Logger) *replaceLoader {
 }
 
 func (l *replaceLoader) GetQuery(tableID, query string) string {
-	return "-- TODO replace loader"
+	return fmt.Sprintf("INSERT OVERWRITE TABLE %s %s", tableID, query)
 }
 
-func (l *replaceLoader) GetPartitionedQuery(tableID, query string, partitionName []string) string {
-	return "-- TODO replace loader"
+func (l *replaceLoader) GetPartitionedQuery(tableID, query string, partitionNames []string) string {
+	return fmt.Sprintf("INSERT OVERWRITE TABLE %s PARTITION (%s) %s", tableID, strings.Join(partitionNames, ", "), query)
 }
