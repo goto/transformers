@@ -3,6 +3,8 @@ package loader
 import (
 	"fmt"
 	"log/slog"
+
+	"github.com/pkg/errors"
 )
 
 type Loader interface {
@@ -23,6 +25,7 @@ func GetLoader(name string, logger *slog.Logger) (Loader, error) {
 	// case MERGE_REPLACE:
 	// 	return NewMergeReplaceLoader(logger), nil
 	default:
-		return nil, fmt.Errorf("loader %s not found", name)
+		err := fmt.Errorf("loader %s not found", name)
+		return nil, errors.WithStack(err)
 	}
 }
