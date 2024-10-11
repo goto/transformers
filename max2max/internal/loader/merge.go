@@ -14,10 +14,10 @@ func NewMergeLoader(logger *slog.Logger) *mergeLoader {
 	}
 }
 
-func (l *mergeLoader) GetQuery(tableID, query string) string {
-	return "-- TODO merge loader"
+func (l *mergeLoader) GetQuery(_, query string) string {
+	return query
 }
 
-func (l *mergeLoader) GetPartitionedQuery(tableID, query string, partitionName []string) string {
-	return "-- TODO merge loader"
+func (l *mergeLoader) GetPartitionedQuery(_, query string, _ []string) string {
+	return query
 }
