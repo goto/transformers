@@ -17,9 +17,9 @@ func NewReplaceLoader(logger *slog.Logger) *replaceLoader {
 }
 
 func (l *replaceLoader) GetQuery(tableID, query string) string {
-	return fmt.Sprintf("INSERT OVERWRITE TABLE %s %s", tableID, query)
+	return fmt.Sprintf("INSERT OVERWRITE TABLE %s %s;", tableID, query)
 }
 
 func (l *replaceLoader) GetPartitionedQuery(tableID, query string, partitionNames []string) string {
-	return fmt.Sprintf("INSERT OVERWRITE TABLE %s PARTITION (%s) %s", tableID, strings.Join(partitionNames, ", "), query)
+	return fmt.Sprintf("INSERT OVERWRITE TABLE %s PARTITION (%s) %s;", tableID, strings.Join(partitionNames, ", "), query)
 }
