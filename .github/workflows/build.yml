@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-max2max:
+  build-mc2mc:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -21,7 +21,7 @@ jobs:
       # Build the Go binary
       - name: Build
         run: |
-          cd max2max
+          cd mc2mc
           mkdir build
           go get .
-          env GOOS=linux GOARCH=amd64 go build -o ./build/max2max .
+          env GOOS=linux GOARCH=amd64 go build -o ./build/mc2mc .

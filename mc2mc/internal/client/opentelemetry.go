@@ -24,7 +24,7 @@ func setupOTelSDK(ctx context.Context, collectorGRPCEndpoint string, jobName, sc
 	meterProvider := metric.NewMeterProvider(
 		metric.WithResource(resource.NewWithAttributes(
 			resource.Default().SchemaURL(),
-			attribute.String("plugin.name", "max2max"),
+			attribute.String("plugin.name", "mc2mc"),
 			attribute.String("job.name", jobName),
 			attribute.String("job.scheduled_time", scheduledTime),
 		)),
