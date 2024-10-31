@@ -6,12 +6,12 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/goto/transformers/max2max/internal/client"
-	"github.com/goto/transformers/max2max/internal/config"
+	"github.com/goto/transformers/mc2mc/internal/client"
+	"github.com/goto/transformers/mc2mc/internal/config"
 	"github.com/pkg/errors"
 )
 
-func max2max() error {
+func mc2mc() error {
 	// load config
 	cfg, err := config.NewConfig()
 	if err != nil {

@@ -2,8 +2,8 @@ package client
 
 import (
 	"github.com/aliyun/aliyun-odps-go-sdk/odps"
-	"github.com/goto/transformers/max2max/internal/loader"
-	"github.com/goto/transformers/max2max/internal/logger"
+	"github.com/goto/transformers/mc2mc/internal/loader"
+	"github.com/goto/transformers/mc2mc/internal/logger"
 	"github.com/pkg/errors"
 )
 

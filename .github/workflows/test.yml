@@ -24,7 +24,7 @@ jobs:
           cd ./bq2bq
           chmod +x ./run_coverage.sh
           ./run_coverage.sh
-  max2max:
+  mc2mc:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -38,6 +38,6 @@ jobs:
       # Build the Go binary
       - name: Build
         run: |
-          cd max2max
+          cd mc2mc
           go get .
           go test ./...

@@ -1,4 +1,4 @@
-module github.com/goto/transformers/max2max
+module github.com/goto/transformers/mc2mc
 
 go 1.22.3
 

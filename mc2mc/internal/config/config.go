@@ -28,7 +28,7 @@ type maxComputeCredentials struct {
 func NewConfig() (*Config, error) {
 	cfg := &Config{
 		Config: odps.NewConfig(),
-		// max2max related config
+		// mc2mc related config
 		LogLevel:           getEnv("LOG_LEVEL", "INFO"),
 		LoadMethod:         getEnv("LOAD_METHOD", "APPEND"),
 		QueryFilePath:      getEnv("QUERY_FILE_PATH", "/data/in/query.sql"),
