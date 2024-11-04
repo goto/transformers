@@ -16,6 +16,8 @@ type Config struct {
 	OtelCollectorGRPCEndpoint string
 	JobName                   string
 	ScheduledTime             string
+	// TODO: remove this temporary support after 15 nov 2024
+	DevEnablePartitionValue bool
 }
 
 type maxComputeCredentials struct {
@@ -37,6 +39,8 @@ func NewConfig() (*Config, error) {
 		OtelCollectorGRPCEndpoint: getEnv("OTEL_COLLECTOR_GRPC_ENDPOINT", ""),
 		JobName:                   getJobName(),
 		ScheduledTime:             getEnv("SCHEDULED_TIME", ""),
+		// TODO: delete this after 15 nov
+		DevEnablePartitionValue: getEnv("DEV__ENABLE_PARTITION_VALUE", "false") == "true",
 	}
 	// ali-odps-go-sdk related config
 	scvAcc := getEnv("SERVICE_ACCOUNT", "")
