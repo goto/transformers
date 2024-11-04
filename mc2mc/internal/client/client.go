@@ -28,6 +28,9 @@ type Client struct {
 	appCtx      context.Context
 	logger      *slog.Logger
 	shutdownFns []func() error
+
+	// TODO: remove this temporary capability after 15 nov
+	enablePartitionValue bool
 }
 
 func NewClient(ctx context.Context, setupFns ...SetupFn) (*Client, error) {
@@ -59,6 +62,9 @@ func (c *Client) Execute(ctx context.Context, tableID, queryFilePath string) err
 	if err != nil {
 		return errors.WithStack(err)
 	}
+	if c.enablePartitionValue {
+		queryRaw = addPartitionValueColumn(queryRaw)
+	}
 
 	// check if table is partitioned
 	partitionNames, err := c.OdpsClient.GetPartitionNames(ctx, tableID)
@@ -81,4 +87,9 @@ func (c *Client) Execute(ctx context.Context, tableID, queryFilePath string) err
 
 	c.logger.Info("execution done")
 	return errors.WithStack(err)
+}
+
+// TODO: remove this temporary support after 15 nov
+func addPartitionValueColumn(rawQuery []byte) []byte {
+	return []byte(fmt.Sprintf("SELECT *, STRING(CURRENT_DATE()) as __partitionvalue FROM (%s);", rawQuery))
 }
