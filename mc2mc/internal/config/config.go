@@ -39,7 +39,7 @@ func NewConfig() (*Config, error) {
 		ScheduledTime:             getEnv("SCHEDULED_TIME", ""),
 	}
 	// ali-odps-go-sdk related config
-	scvAcc := getEnv("SERVICE_ACCOUNT", "")
+	scvAcc := getEnv("MC_SERVICE_ACCOUNT", "")
 	cred, err := collectMaxComputeCredential([]byte(scvAcc))
 	if err != nil {
 		return nil, errors.WithStack(err)
