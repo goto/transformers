@@ -48,8 +48,8 @@ func NewConfig() (*Config, error) {
 	cfg.Config.AccessKey = cred.AccessKey
 	cfg.Config.Endpoint = cred.Endpoint
 	cfg.Config.ProjectName = cred.ProjectName
-	cfg.Config.HttpTimeout = getEnvDuration("MAXCOMPUTE_HTTP_TIMEOUT", "10s")
-	cfg.Config.TcpConnectionTimeout = getEnvDuration("MAXCOMPUTE_TCP_TIMEOUT", "30s")
+	cfg.Config.HttpTimeout = getEnvDuration("MC_HTTP_TIMEOUT", "10s")
+	cfg.Config.TcpConnectionTimeout = getEnvDuration("MC_TCP_TIMEOUT", "30s")
 
 	return cfg, nil
 }
