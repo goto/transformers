@@ -16,3 +16,8 @@ func NewLogger(logLevel string) (*slog.Logger, error) {
 	writter := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: level})
 	return slog.New(writter), nil
 }
+
+func NewDefaultLogger() *slog.Logger {
+	l, _ := NewLogger("INFO")
+	return l
+}
