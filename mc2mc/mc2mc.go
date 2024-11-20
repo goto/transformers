@@ -29,6 +29,7 @@ func mc2mc() error {
 		client.SetupOTelSDK(cfg.OtelCollectorGRPCEndpoint, cfg.JobName, cfg.ScheduledTime),
 		client.SetupODPSClient(cfg.GenOdps()),
 		client.SetupLoader(cfg.LoadMethod),
+		client.EnablePartitionValue(cfg.DevEnablePartitionValue),
 	)
 	if err != nil {
 		return errors.WithStack(err)

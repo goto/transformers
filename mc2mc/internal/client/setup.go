@@ -51,3 +51,10 @@ func SetupLoader(loadMethod string) SetupFn {
 		return nil
 	}
 }
+
+func EnablePartitionValue(enabled bool) SetupFn {
+	return func(c *Client) error {
+		c.enablePartitionValue = enabled
+		return nil
+	}
+}
