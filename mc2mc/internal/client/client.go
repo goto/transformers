@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+
+	"github.com/goto/transformers/mc2mc/internal/loader"
 )
 
 type Loader interface {
@@ -91,6 +93,6 @@ func (c *Client) Execute(ctx context.Context, tableID, queryFilePath string) err
 
 // TODO: remove this temporary support after 15 nov
 func addPartitionValueColumn(rawQuery []byte) []byte {
-	sanitizeQuery := strings.TrimSuffix(string(rawQuery), ";")
-	return []byte(fmt.Sprintf("SELECT *, STRING(CURRENT_DATE()) as __partitionvalue FROM (%s)", sanitizeQuery))
+	header, qr := loader.SeparateHeadersAndQuery(string(rawQuery))
+	return []byte(fmt.Sprintf("%s SELECT *, STRING(CURRENT_DATE()) as __partitionvalue FROM (%s)", header, qr))
 }

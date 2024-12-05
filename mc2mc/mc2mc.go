@@ -6,9 +6,10 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/pkg/errors"
+
 	"github.com/goto/transformers/mc2mc/internal/client"
 	"github.com/goto/transformers/mc2mc/internal/config"
-	"github.com/pkg/errors"
 )
 
 func mc2mc() error {

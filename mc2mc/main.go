@@ -5,6 +5,7 @@ import (
 	"os"
 
 	_ "github.com/aliyun/aliyun-odps-go-sdk/sqldriver"
+
 	"github.com/goto/transformers/mc2mc/internal/logger"
 )
 
