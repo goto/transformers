@@ -6,9 +6,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/goto/transformers/mc2mc/internal/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/goto/transformers/mc2mc/internal/client"
 )
 
 func TestExecute(t *testing.T) {

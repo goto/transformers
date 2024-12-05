@@ -17,9 +17,11 @@ func NewAppendLoader(logger *slog.Logger) (*appendLoader, error) {
 }
 
 func (l *appendLoader) GetQuery(tableID, query string) string {
-	return fmt.Sprintf("INSERT INTO TABLE %s %s;", tableID, query)
+	headers, qr := SeparateHeadersAndQuery(query)
+	return fmt.Sprintf("%s INSERT INTO TABLE %s %s;", headers, tableID, qr)
 }
 
 func (l *appendLoader) GetPartitionedQuery(tableID, query string, partitionNames []string) string {
-	return fmt.Sprintf("INSERT INTO TABLE %s PARTITION (%s) %s;", tableID, strings.Join(partitionNames, ", "), query)
+	headers, qr := SeparateHeadersAndQuery(query)
+	return fmt.Sprintf("%s INSERT INTO TABLE %s PARTITION (%s) %s;", headers, tableID, strings.Join(partitionNames, ", "), qr)
 }
