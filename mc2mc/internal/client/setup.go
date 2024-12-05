@@ -2,9 +2,10 @@ package client
 
 import (
 	"github.com/aliyun/aliyun-odps-go-sdk/odps"
+	"github.com/pkg/errors"
+
 	"github.com/goto/transformers/mc2mc/internal/loader"
 	"github.com/goto/transformers/mc2mc/internal/logger"
-	"github.com/pkg/errors"
 )
 
 type SetupFn func(c *Client) error
