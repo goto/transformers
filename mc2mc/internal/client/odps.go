@@ -28,7 +28,8 @@ func NewODPSClient(logger *slog.Logger, client *odps.Odps) *odpsClient {
 // with capability to do graceful shutdown by terminating task instance
 // when context is cancelled.
 func (c *odpsClient) ExecSQL(ctx context.Context, query string) error {
-	taskIns, err := c.client.ExecSQl(query)
+	hints := addHints(query)
+	taskIns, err := c.client.ExecSQlWithHints(query, hints)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -81,4 +82,15 @@ func wait(taskIns *odps.Instance) <-chan error {
 		errChan <- errors.WithStack(err)
 	}(errChan)
 	return errChan
+}
+
+func addHints(query string) map[string]string {
+	multisql := strings.Contains(query, ";")
+	if multisql {
+		return map[string]string{
+			"odps.sql.submit.mode": "script",
+		}
+	}
+
+	return nil
 }
