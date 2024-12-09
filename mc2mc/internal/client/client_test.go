@@ -23,11 +23,30 @@ func TestExecute(t *testing.T) {
 		// assert
 		assert.Error(t, err)
 	})
+	t.Run("should return error when getting ordered columns fails", func(t *testing.T) {
+		// arrange
+		client, err := client.NewClient(context.TODO(), client.SetupLogger("error"))
+		require.NoError(t, err)
+		client.OdpsClient = &mockOdpsClient{
+			orderedColumns: func() ([]string, error) {
+				return nil, fmt.Errorf("error get ordered columns")
+			},
+		}
+		assert.NoError(t, os.WriteFile("/tmp/query.sql", []byte("SELECT * FROM table;"), 0644))
+		// act
+		err = client.Execute(context.TODO(), "project_test.table_test", "/tmp/query.sql")
+		// assert
+		assert.Error(t, err)
+		assert.ErrorContains(t, err, "error get ordered columns")
+	})
 	t.Run("should return error when getting partition name fails", func(t *testing.T) {
 		// arrange
 		client, err := client.NewClient(context.TODO(), client.SetupLogger("error"))
 		require.NoError(t, err)
 		client.OdpsClient = &mockOdpsClient{
+			orderedColumns: func() ([]string, error) {
+				return []string{"col1", "col2"}, nil
+			},
 			partitionResult: func() ([]string, error) {
 				return nil, fmt.Errorf("error get partition name")
 			},
@@ -44,6 +63,9 @@ func TestExecute(t *testing.T) {
 		client, err := client.NewClient(context.TODO(), client.SetupLogger("error"), client.SetupLoader("APPEND"))
 		require.NoError(t, err)
 		client.OdpsClient = &mockOdpsClient{
+			orderedColumns: func() ([]string, error) {
+				return []string{"col1", "col2"}, nil
+			},
 			partitionResult: func() ([]string, error) {
 				return nil, nil
 			},
@@ -63,6 +85,9 @@ func TestExecute(t *testing.T) {
 		client, err := client.NewClient(context.TODO(), client.SetupLogger("error"), client.SetupLoader("REPLACE"))
 		require.NoError(t, err)
 		client.OdpsClient = &mockOdpsClient{
+			orderedColumns: func() ([]string, error) {
+				return []string{"col1", "col2"}, nil
+			},
 			partitionResult: func() ([]string, error) {
 				return []string{"event_date"}, nil
 			},
@@ -72,11 +97,11 @@ func TestExecute(t *testing.T) {
 		}
 		client.Loader = &mockLoader{
 			getQueryFunc: func(tableID, query string) string {
-				return "INSERT OVERWRITE TABLE project_test.table_test SELECT * FROM table;"
+				return "INSERT OVERWRITE TABLE project_test.table_test SELECT col1, col2 FROM (SELECT * FROM table);"
 			},
 			getPartitionedQueryFunc: func(tableID, query string, partitionNames []string) string {
 				assert.True(t, true, "should be called")
-				return "INSERT OVERWRITE TABLE project_test.table_test PARTITION(event_date) SELECT * FROM table;"
+				return "INSERT OVERWRITE TABLE project_test.table_test PARTITION(event_date) SELECT col1, col2 FROM (SELECT * FROM table);"
 			},
 		}
 		require.NoError(t, os.WriteFile("/tmp/query.sql", []byte("SELECT * FROM table;"), 0644))
@@ -90,6 +115,9 @@ func TestExecute(t *testing.T) {
 		client, err := client.NewClient(context.TODO(), client.SetupLogger("error"), client.SetupLoader("REPLACE"), client.EnableAutoPartition(true))
 		require.NoError(t, err)
 		client.OdpsClient = &mockOdpsClient{
+			orderedColumns: func() ([]string, error) {
+				return []string{"col1", "col2"}, nil
+			},
 			partitionResult: func() ([]string, error) {
 				return []string{"_partition_value"}, nil
 			},
@@ -99,11 +127,11 @@ func TestExecute(t *testing.T) {
 		}
 		client.Loader = &mockLoader{
 			getQueryFunc: func(tableID, query string) string {
-				return "INSERT OVERWRITE TABLE project_test.table_test SELECT * FROM table;"
+				return "INSERT OVERWRITE TABLE project_test.table_test SELECT col1, col2 FROM (SELECT * FROM table);"
 			},
 			getPartitionedQueryFunc: func(tableID, query string, partitionNames []string) string {
 				assert.False(t, true, "should not be called")
-				return "INSERT OVERWRITE TABLE project_test.table_test PARTITION(event_date) SELECT * FROM table;"
+				return "INSERT OVERWRITE TABLE project_test.table_test PARTITION(_partition_value) SELECT col1, col2 FROM (SELECT * FROM table);"
 			},
 		}
 		require.NoError(t, os.WriteFile("/tmp/query.sql", []byte("SELECT * FROM table;"), 0644))
@@ -117,6 +145,7 @@ func TestExecute(t *testing.T) {
 type mockOdpsClient struct {
 	partitionResult func() ([]string, error)
 	execSQLResult   func() error
+	orderedColumns  func() ([]string, error)
 }
 
 func (m *mockOdpsClient) GetPartitionNames(ctx context.Context, tableID string) ([]string, error) {
@@ -125,6 +154,10 @@ func (m *mockOdpsClient) GetPartitionNames(ctx context.Context, tableID string) 
 
 func (m *mockOdpsClient) ExecSQL(ctx context.Context, query string) error {
 	return m.execSQLResult()
+}
+
+func (m *mockOdpsClient) GetOrderedColumns(tableID string) ([]string, error) {
+	return m.orderedColumns()
 }
 
 type mockLoader struct {

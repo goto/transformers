@@ -19,6 +19,7 @@ type Loader interface {
 }
 
 type OdpsClient interface {
+	GetOrderedColumns(tableID string) ([]string, error)
 	GetPartitionNames(ctx context.Context, tableID string) ([]string, error)
 	ExecSQL(ctx context.Context, query string) error
 }
@@ -65,6 +66,17 @@ func (c *Client) Execute(ctx context.Context, tableID, queryFilePath string) err
 	if err != nil {
 		return errors.WithStack(err)
 	}
+
+	// get column names
+	if tableID != "" {
+		columnNames, err := c.OdpsClient.GetOrderedColumns(tableID)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		// construct query with ordered columns
+		queryRaw = constructQueryWithOrderedColumns(queryRaw, columnNames)
+	}
+
 	if c.enablePartitionValue && !c.enableAutoPartition {
 		queryRaw = addPartitionValueColumn(queryRaw)
 	}
@@ -97,4 +109,9 @@ func (c *Client) Execute(ctx context.Context, tableID, queryFilePath string) err
 func addPartitionValueColumn(rawQuery []byte) []byte {
 	header, qr := loader.SeparateHeadersAndQuery(string(rawQuery))
 	return []byte(fmt.Sprintf("%s SELECT *, STRING(CURRENT_DATE()) as __partitionvalue FROM (%s)", header, qr))
+}
+
+func constructQueryWithOrderedColumns(query []byte, orderedColumns []string) []byte {
+	header, qr := loader.SeparateHeadersAndQuery(string(query))
+	return []byte(fmt.Sprintf("%s %s", header, loader.ConstructQueryWithOrderedColumns(qr, orderedColumns)))
 }

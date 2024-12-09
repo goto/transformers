@@ -70,7 +70,28 @@ func (c *odpsClient) GetPartitionNames(_ context.Context, tableID string) ([]str
 	for _, partition := range table.Schema().PartitionColumns {
 		partitionNames = append(partitionNames, partition.Name)
 	}
+
 	return partitionNames, nil
+}
+
+// GetOrderedColumns returns the ordered column names of the given table
+// by querying the table schema.
+func (c *odpsClient) GetOrderedColumns(tableID string) ([]string, error) {
+	splittedTableID := strings.Split(tableID, ".")
+	if len(splittedTableID) != 3 {
+		return nil, errors.Errorf("invalid tableID (tableID should be in format project.schema.table): %s", tableID)
+	}
+	project, schema, name := splittedTableID[0], splittedTableID[1], splittedTableID[2]
+	table := odps.NewTable(c.client, project, schema, name)
+	if err := table.Load(); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	var columnNames []string
+	for _, column := range table.Schema().Columns {
+		columnNames = append(columnNames, column.Name)
+	}
+
+	return columnNames, nil
 }
 
 // wait waits for the task instance to finish on a separate goroutine
