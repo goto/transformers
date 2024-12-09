@@ -60,7 +60,7 @@ func TestExecute(t *testing.T) {
 	})
 	t.Run("should return nil when everything is successful", func(t *testing.T) {
 		// arrange
-		client, err := client.NewClient(context.TODO(), client.SetupLogger("error"), client.SetupLoader("APPEND"))
+		client, err := client.NewClient(context.TODO(), client.SetupLogger("error"), client.SetupLoader("REPLACE"))
 		require.NoError(t, err)
 		client.OdpsClient = &mockOdpsClient{
 			partitionResult: func() ([]string, error) {
@@ -68,6 +68,42 @@ func TestExecute(t *testing.T) {
 			},
 			execSQLResult: func() error {
 				return nil
+			},
+		}
+		client.Loader = &mockLoader{
+			getQueryFunc: func(tableID, query string) string {
+				return "INSERT OVERWRITE TABLE project_test.table_test SELECT * FROM table;"
+			},
+			getPartitionedQueryFunc: func(tableID, query string, partitionNames []string) string {
+				assert.True(t, true, "should be called")
+				return "INSERT OVERWRITE TABLE project_test.table_test PARTITION(event_date) SELECT * FROM table;"
+			},
+		}
+		require.NoError(t, os.WriteFile("/tmp/query.sql", []byte("SELECT * FROM table;"), 0644))
+		// act
+		err = client.Execute(context.TODO(), "project_test.table_test", "/tmp/query.sql")
+		// assert
+		assert.NoError(t, err)
+	})
+	t.Run("should return nil when everything is successful with enable auto partition", func(t *testing.T) {
+		// arrange
+		client, err := client.NewClient(context.TODO(), client.SetupLogger("error"), client.SetupLoader("REPLACE"), client.EnableAutoPartition(true))
+		require.NoError(t, err)
+		client.OdpsClient = &mockOdpsClient{
+			partitionResult: func() ([]string, error) {
+				return []string{"_partition_value"}, nil
+			},
+			execSQLResult: func() error {
+				return nil
+			},
+		}
+		client.Loader = &mockLoader{
+			getQueryFunc: func(tableID, query string) string {
+				return "INSERT OVERWRITE TABLE project_test.table_test SELECT * FROM table;"
+			},
+			getPartitionedQueryFunc: func(tableID, query string, partitionNames []string) string {
+				assert.False(t, true, "should not be called")
+				return "INSERT OVERWRITE TABLE project_test.table_test PARTITION(event_date) SELECT * FROM table;"
 			},
 		}
 		require.NoError(t, os.WriteFile("/tmp/query.sql", []byte("SELECT * FROM table;"), 0644))
@@ -89,4 +125,17 @@ func (m *mockOdpsClient) GetPartitionNames(ctx context.Context, tableID string) 
 
 func (m *mockOdpsClient) ExecSQL(ctx context.Context, query string) error {
 	return m.execSQLResult()
+}
+
+type mockLoader struct {
+	getQueryFunc            func(tableID, query string) string
+	getPartitionedQueryFunc func(tableID, query string, partitionNames []string) string
+}
+
+func (m *mockLoader) GetQuery(tableID, query string) string {
+	return m.getQueryFunc(tableID, query)
+}
+
+func (m *mockLoader) GetPartitionedQuery(tableID, query string, partitionNames []string) string {
+	return m.getPartitionedQueryFunc(tableID, query, partitionNames)
 }

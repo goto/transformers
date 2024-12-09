@@ -31,6 +31,7 @@ func mc2mc() error {
 		client.SetupODPSClient(cfg.GenOdps()),
 		client.SetupLoader(cfg.LoadMethod),
 		client.EnablePartitionValue(cfg.DevEnablePartitionValue),
+		client.EnableAutoPartition(cfg.DevEnableAutoPartition),
 	)
 	if err != nil {
 		return errors.WithStack(err)
