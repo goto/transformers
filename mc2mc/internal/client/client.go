@@ -68,12 +68,14 @@ func (c *Client) Execute(ctx context.Context, tableID, queryFilePath string) err
 	}
 
 	// get column names
-	columnNames, err := c.OdpsClient.GetOrderedColumns(tableID)
-	if err != nil {
-		return errors.WithStack(err)
+	if tableID != "" {
+		columnNames, err := c.OdpsClient.GetOrderedColumns(tableID)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		// construct query with ordered columns
+		queryRaw = constructQueryWithOrderedColumns(queryRaw, columnNames)
 	}
-	// construct query with ordered columns
-	queryRaw = constructQueryWithOrderedColumns(queryRaw, columnNames)
 
 	if c.enablePartitionValue && !c.enableAutoPartition {
 		queryRaw = addPartitionValueColumn(queryRaw)
@@ -110,5 +112,6 @@ func addPartitionValueColumn(rawQuery []byte) []byte {
 }
 
 func constructQueryWithOrderedColumns(query []byte, orderedColumns []string) []byte {
-	return []byte(loader.ConstructQueryWithOrderedColumns(string(query), orderedColumns))
+	header, qr := loader.SeparateHeadersAndQuery(string(query))
+	return []byte(fmt.Sprintf("%s %s", header, loader.ConstructQueryWithOrderedColumns(qr, orderedColumns)))
 }
