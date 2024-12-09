@@ -33,6 +33,7 @@ type Client struct {
 
 	// TODO: remove this temporary capability after 15 nov
 	enablePartitionValue bool
+	enableAutoPartition  bool
 }
 
 func NewClient(ctx context.Context, setupFns ...SetupFn) (*Client, error) {
@@ -64,7 +65,7 @@ func (c *Client) Execute(ctx context.Context, tableID, queryFilePath string) err
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	if c.enablePartitionValue {
+	if c.enablePartitionValue && !c.enableAutoPartition {
 		queryRaw = addPartitionValueColumn(queryRaw)
 	}
 
@@ -76,7 +77,8 @@ func (c *Client) Execute(ctx context.Context, tableID, queryFilePath string) err
 
 	// prepare query
 	queryToExec := c.Loader.GetQuery(tableID, string(queryRaw))
-	if len(partitionNames) > 0 {
+	if len(partitionNames) > 0 && !c.enableAutoPartition {
+		// when table is partitioned and auto partition is disabled, then we need to specify partition columns explicitly
 		c.logger.Info(fmt.Sprintf("table %s is partitioned by %s", tableID, strings.Join(partitionNames, ", ")))
 		queryToExec = c.Loader.GetPartitionedQuery(tableID, string(queryRaw), partitionNames)
 	}

@@ -18,6 +18,7 @@ type Config struct {
 	ScheduledTime             string
 	// TODO: remove this temporary support after 15 nov 2024
 	DevEnablePartitionValue bool
+	DevEnableAutoPartition  bool
 }
 
 type maxComputeCredentials struct {
@@ -41,6 +42,7 @@ func NewConfig() (*Config, error) {
 		ScheduledTime:             getEnv("SCHEDULED_TIME", ""),
 		// TODO: delete this after 15 nov
 		DevEnablePartitionValue: getEnv("DEV__ENABLE_PARTITION_VALUE", "false") == "true",
+		DevEnableAutoPartition:  getEnv("DEV__ENABLE_AUTO_PARTITION", "false") == "true",
 	}
 	// ali-odps-go-sdk related config
 	scvAcc := getEnv("MC_SERVICE_ACCOUNT", "")

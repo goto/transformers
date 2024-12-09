@@ -59,3 +59,10 @@ func EnablePartitionValue(enabled bool) SetupFn {
 		return nil
 	}
 }
+
+func EnableAutoPartition(enabled bool) SetupFn {
+	return func(c *Client) error {
+		c.enableAutoPartition = enabled
+		return nil
+	}
+}
