@@ -1,6 +1,7 @@
 package loader
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -22,4 +23,10 @@ func SeparateHeadersAndQuery(query string) (string, string) {
 		headers += ";"
 	}
 	return headers, last
+}
+
+func ConstructQueryWithOrderedColumns(query string, orderedColumns []string) string {
+	idx := strings.Index(query, ";")
+	query = query[:idx]
+	return fmt.Sprintf("SELECT %s FROM (%s);", strings.Join(orderedColumns, ", "), query)
 }

@@ -56,3 +56,13 @@ where CAST(event_timestamp as DATE) = '{{ .DSTART | Date }}'
 		assert.Contains(t, query, expectedQuery)
 	})
 }
+
+func TestConstructQueryWithOrderedColumns(t *testing.T) {
+	t.Run("returns query with ordered columns", func(t *testing.T) {
+		q1 := `select col_2 as col2, col_3 as col3, col_1 as col1 from project.schema.table;`
+		orderedColumns := []string{"col1", "col2", "col3"}
+		query := loader.ConstructQueryWithOrderedColumns(q1, orderedColumns)
+		expected := "SELECT col1, col2, col3 FROM (select col_2 as col2, col_3 as col3, col_1 as col1 from project.schema.table);"
+		assert.Equal(t, expected, query)
+	})
+}
