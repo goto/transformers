@@ -26,7 +26,5 @@ func SeparateHeadersAndQuery(query string) (string, string) {
 }
 
 func ConstructQueryWithOrderedColumns(query string, orderedColumns []string) string {
-	idx := strings.Index(query, ";")
-	query = query[:idx]
-	return fmt.Sprintf("SELECT %s FROM (%s);", strings.Join(orderedColumns, ", "), query)
+	return fmt.Sprintf("SELECT %s FROM (%s)", strings.Join(orderedColumns, ", "), query)
 }
