@@ -73,8 +73,8 @@ func (c *Client) Execute(ctx context.Context, tableID, queryFilePath string) err
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		// construct query with ordered columns
-		queryRaw = constructQueryWithOrderedColumns(queryRaw, columnNames)
+		// construct query with ordered columns and BQ pseudo columns for ingestion time
+		queryRaw = constructQueryWithOrderedColumnsWithBQIngestionTime(queryRaw, columnNames)
 	}
 
 	if c.enablePartitionValue && !c.enableAutoPartition {
@@ -109,6 +109,23 @@ func (c *Client) Execute(ctx context.Context, tableID, queryFilePath string) err
 func addPartitionValueColumn(rawQuery []byte) []byte {
 	header, qr := loader.SeparateHeadersAndQuery(string(rawQuery))
 	return []byte(fmt.Sprintf("%s SELECT *, STRING(CURRENT_DATE()) as __partitionvalue FROM (%s)", header, qr))
+}
+
+// constructQueryWithOrderedColumnsWithBQIngestionTime constructs query with ordered columns and BQ pseudo columns for ingestion time
+// ref: https://cloud.google.com/bigquery/docs/querying-partitioned-tables#query_an_ingestion-time_partitioned_table
+func constructQueryWithOrderedColumnsWithBQIngestionTime(query []byte, orderedColumns []string) []byte {
+	var orderedColumnsWithBQIngestionTime []string
+	for _, col := range orderedColumns {
+		val := col
+		switch col {
+		case "_partitiontime":
+			val = "CURRENT_TIMESTAMP() as _partitiontime"
+		case "_partitiondate":
+			val = "CURRENT_DATE() as _partitiondate"
+		}
+		orderedColumnsWithBQIngestionTime = append(orderedColumnsWithBQIngestionTime, val)
+	}
+	return constructQueryWithOrderedColumns(query, orderedColumnsWithBQIngestionTime)
 }
 
 func constructQueryWithOrderedColumns(query []byte, orderedColumns []string) []byte {
