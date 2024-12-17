@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -59,7 +60,7 @@ func (c *Client) Close() error {
 	return errors.WithStack(err)
 }
 
-func (c *Client) Execute(ctx context.Context, tableID, queryFilePath string) error {
+func (c *Client) Execute(ctx context.Context, tableID, queryFilePath string, dstart string) error {
 	// read query from filepath
 	c.logger.Info(fmt.Sprintf("executing query from %s", queryFilePath))
 	queryRaw, err := os.ReadFile(queryFilePath)
@@ -73,8 +74,14 @@ func (c *Client) Execute(ctx context.Context, tableID, queryFilePath string) err
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		// construct query with ordered columns and BQ pseudo columns for ingestion time
-		queryRaw = constructQueryWithOrderedColumnsWithBQIngestionTime(queryRaw, columnNames)
+		// convert time 2024-11-04T00:00:00Z to 2024-11-04 00:00:00
+		start, err := time.Parse(time.RFC3339, dstart)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		dstart = start.Format(time.DateTime)
+		// construct query with ordered columns and BQ pseudo columns for ingestion time (based on dstart)
+		queryRaw = constructQueryWithOrderedColumnsWithBQIngestionTime(queryRaw, columnNames, dstart)
 	}
 
 	if c.enablePartitionValue && !c.enableAutoPartition {
@@ -112,16 +119,17 @@ func addPartitionValueColumn(rawQuery []byte) []byte {
 }
 
 // constructQueryWithOrderedColumnsWithBQIngestionTime constructs query with ordered columns and BQ pseudo columns for ingestion time
+// based on dstart.
 // ref: https://cloud.google.com/bigquery/docs/querying-partitioned-tables#query_an_ingestion-time_partitioned_table
-func constructQueryWithOrderedColumnsWithBQIngestionTime(query []byte, orderedColumns []string) []byte {
+func constructQueryWithOrderedColumnsWithBQIngestionTime(query []byte, orderedColumns []string, dstart string) []byte {
 	var orderedColumnsWithBQIngestionTime []string
 	for _, col := range orderedColumns {
 		val := col
 		switch col {
 		case "_partitiontime":
-			val = "CURRENT_TIMESTAMP() as _partitiontime"
+			val = fmt.Sprintf("TIMESTAMP('%s') as _partitiontime", dstart)
 		case "_partitiondate":
-			val = "CURRENT_DATE() as _partitiondate"
+			val = fmt.Sprintf("DATE(TIMESTAMP('%s')) as _partitiondate", dstart)
 		}
 		orderedColumnsWithBQIngestionTime = append(orderedColumnsWithBQIngestionTime, val)
 	}

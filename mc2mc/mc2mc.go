@@ -39,7 +39,7 @@ func mc2mc() error {
 	defer client.Close()
 
 	// execute query
-	err = client.Execute(ctx, cfg.DestinationTableID, cfg.QueryFilePath)
+	err = client.Execute(ctx, cfg.DestinationTableID, cfg.QueryFilePath, cfg.DStart)
 	if err != nil {
 		return errors.WithStack(err)
 	}
