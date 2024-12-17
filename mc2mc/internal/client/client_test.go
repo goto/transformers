@@ -19,7 +19,7 @@ func TestExecute(t *testing.T) {
 		require.NoError(t, err)
 		client.OdpsClient = &mockOdpsClient{}
 		// act
-		err = client.Execute(context.TODO(), "", "./nonexistentfile")
+		err = client.Execute(context.TODO(), "", "./nonexistentfile", "2024-11-04T00:00:00Z")
 		// assert
 		assert.Error(t, err)
 	})
@@ -34,7 +34,7 @@ func TestExecute(t *testing.T) {
 		}
 		assert.NoError(t, os.WriteFile("/tmp/query.sql", []byte("SELECT * FROM table;"), 0644))
 		// act
-		err = client.Execute(context.TODO(), "project_test.table_test", "/tmp/query.sql")
+		err = client.Execute(context.TODO(), "project_test.table_test", "/tmp/query.sql", "2024-11-04T00:00:00Z")
 		// assert
 		assert.Error(t, err)
 		assert.ErrorContains(t, err, "error get ordered columns")
@@ -53,7 +53,7 @@ func TestExecute(t *testing.T) {
 		}
 		assert.NoError(t, os.WriteFile("/tmp/query.sql", []byte("SELECT * FROM table;"), 0644))
 		// act
-		err = client.Execute(context.TODO(), "project_test.table_test", "/tmp/query.sql")
+		err = client.Execute(context.TODO(), "project_test.table_test", "/tmp/query.sql", "2024-11-04T00:00:00Z")
 		// assert
 		assert.Error(t, err)
 		assert.ErrorContains(t, err, "error get partition name")
@@ -75,7 +75,7 @@ func TestExecute(t *testing.T) {
 		}
 		require.NoError(t, os.WriteFile("/tmp/query.sql", []byte("SELECT * FROM table;"), 0644))
 		// act
-		err = client.Execute(context.TODO(), "project_test.table_test", "/tmp/query.sql")
+		err = client.Execute(context.TODO(), "project_test.table_test", "/tmp/query.sql", "2024-11-04T00:00:00Z")
 		// assert
 		assert.Error(t, err)
 		assert.ErrorContains(t, err, "error exec sql")
@@ -106,7 +106,7 @@ func TestExecute(t *testing.T) {
 		}
 		require.NoError(t, os.WriteFile("/tmp/query.sql", []byte("SELECT * FROM table;"), 0644))
 		// act
-		err = client.Execute(context.TODO(), "project_test.table_test", "/tmp/query.sql")
+		err = client.Execute(context.TODO(), "project_test.table_test", "/tmp/query.sql", "2024-11-04T00:00:00Z")
 		// assert
 		assert.NoError(t, err)
 	})
@@ -136,7 +136,7 @@ func TestExecute(t *testing.T) {
 		}
 		require.NoError(t, os.WriteFile("/tmp/query.sql", []byte("SELECT * FROM table;"), 0644))
 		// act
-		err = client.Execute(context.TODO(), "project_test.table_test", "/tmp/query.sql")
+		err = client.Execute(context.TODO(), "project_test.table_test", "/tmp/query.sql", "2024-11-04T00:00:00Z")
 		// assert
 		assert.NoError(t, err)
 	})

@@ -16,6 +16,7 @@ type Config struct {
 	OtelCollectorGRPCEndpoint string
 	JobName                   string
 	ScheduledTime             string
+	DStart                    string
 	// TODO: remove this temporary support after 15 nov 2024
 	DevEnablePartitionValue bool
 	DevEnableAutoPartition  bool
@@ -40,6 +41,7 @@ func NewConfig() (*Config, error) {
 		OtelCollectorGRPCEndpoint: getEnv("OTEL_COLLECTOR_GRPC_ENDPOINT", ""),
 		JobName:                   getJobName(),
 		ScheduledTime:             getEnv("SCHEDULED_TIME", ""),
+		DStart:                    getEnv("DSTART", ""),
 		// TODO: delete this after 15 nov
 		DevEnablePartitionValue: getEnv("DEV__ENABLE_PARTITION_VALUE", "false") == "true",
 		DevEnableAutoPartition:  getEnv("DEV__ENABLE_AUTO_PARTITION", "false") == "true",
