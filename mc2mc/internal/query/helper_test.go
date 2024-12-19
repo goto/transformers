@@ -1,4 +1,4 @@
-package loader_test
+package query_test
 
 import (
 	"strings"
@@ -6,13 +6,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/goto/transformers/mc2mc/internal/loader"
+	"github.com/goto/transformers/mc2mc/internal/query"
 )
 
 func TestMacroSeparator(t *testing.T) {
 	t.Run("returns query without macros", func(t *testing.T) {
 		q1 := `select * from playground`
-		macros, query := loader.SeparateHeadersAndQuery(q1)
+		macros, query := query.SeparateHeadersAndQuery(q1)
 		assert.Empty(t, macros)
 		assert.Equal(t, q1, query)
 	})
@@ -20,14 +20,14 @@ func TestMacroSeparator(t *testing.T) {
 		q1 := `
 select * from playground`
 
-		header, query := loader.SeparateHeadersAndQuery(q1)
+		header, query := query.SeparateHeadersAndQuery(q1)
 		assert.Empty(t, header)
 		assert.Contains(t, query, q1)
 	})
 	t.Run("splits headers and query", func(t *testing.T) {
 		q1 := `set odps.sql.allow.fullscan=true;
 select * from playground`
-		headers, query := loader.SeparateHeadersAndQuery(q1)
+		headers, query := query.SeparateHeadersAndQuery(q1)
 		assert.Equal(t, "set odps.sql.allow.fullscan=true;", headers)
 		assert.Equal(t, "select * from playground", strings.TrimSpace(query))
 	})
@@ -42,7 +42,7 @@ from presentation.main.important_date
 where CAST(event_timestamp as DATE) = '{{ .DSTART | Date }}'
   and client_id in ('123')
 `
-		headers, query := loader.SeparateHeadersAndQuery(q1)
+		headers, query := query.SeparateHeadersAndQuery(q1)
 		expectedHeader := `set odps.sql.allow.fullscan=true;
 set odps.sql.python.version=cp37;`
 		assert.Equal(t, expectedHeader, headers)
@@ -54,15 +54,5 @@ from presentation.main.important_date
 where CAST(event_timestamp as DATE) = '{{ .DSTART | Date }}'
   and client_id in ('123')`
 		assert.Contains(t, query, expectedQuery)
-	})
-}
-
-func TestConstructQueryWithOrderedColumns(t *testing.T) {
-	t.Run("returns query with ordered columns", func(t *testing.T) {
-		q1 := `select col_2 as col2, col_3 as col3, col_1 as col1 from project.schema.table`
-		orderedColumns := []string{"col1", "col2", "col3"}
-		query := loader.ConstructQueryWithOrderedColumns(q1, orderedColumns)
-		expected := "SELECT col1, col2, col3 FROM (select col_2 as col2, col_3 as col3, col_1 as col1 from project.schema.table)"
-		assert.Equal(t, expected, query)
 	})
 }
