@@ -1,25 +1,38 @@
 package query
 
 import (
+	"regexp"
 	"strings"
 )
 
-func SeparateHeadersAndQuery(query string) (string, string) {
-	parts := strings.Split(query, ";")
+var (
+	headerPattern = regexp.MustCompile(`(?i)^\s*set\s+[^;]+;`) // regex to match header statements
+)
 
-	last := ""
-	idx := len(parts) - 1
-	for idx >= 0 {
-		last = parts[idx]
-		if strings.TrimSpace(last) != "" {
+func SeparateHeadersAndQuery(query string) (string, string) {
+	query = strings.TrimSpace(query)
+
+	headers := []string{}
+	remainingQuery := query
+
+	// keep matching header statements until there are no more
+	for {
+		match := headerPattern.FindString(remainingQuery)
+		if match == "" {
 			break
 		}
-		idx = idx - 1
+		headers = append(headers, strings.TrimSpace(match))
+		remainingQuery = strings.TrimSpace(remainingQuery[len(match):])
 	}
 
-	headers := strings.Join(parts[:idx], ";")
-	if headers != "" {
-		headers += ";"
+	headerStr := ""
+	if len(headers) > 0 {
+		headerStr = strings.Join(headers, "\n")
 	}
-	return headers, last
+
+	// remove any leading semicolons from the remaining SQL
+	queryStr := strings.TrimSuffix(remainingQuery, ";")
+
+	// Trim any remaining whitespace from both parts
+	return strings.TrimSpace(headerStr), queryStr
 }
