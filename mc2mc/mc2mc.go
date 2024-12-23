@@ -16,9 +16,9 @@ import (
 	"github.com/goto/transformers/mc2mc/internal/query"
 )
 
-func mc2mc() error {
+func mc2mc(envs []string) error {
 	// load config
-	cfg, err := config.NewConfig()
+	cfg, err := config.NewConfig(envs...)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -68,8 +68,8 @@ func mc2mc() error {
 			query.WithDestination(cfg.DestinationTableID),
 			query.WithOverridedValue("_partitiontime", fmt.Sprintf("TIMESTAMP('%s')", dstart)),
 			query.WithOverridedValue("_partitiondate", fmt.Sprintf("DATE(TIMESTAMP('%s'))", dstart)),
-			query.WithAutoPartition(cfg.DevEnableAutoPartition),
-			query.WithPartitionValue(cfg.DevEnablePartitionValue),
+			query.WithAutoPartition(cfg.DevEnableAutoPartition == "true"),
+			query.WithPartitionValue(cfg.DevEnablePartitionValue == "true"),
 			query.WithColumnOrder(),
 		).Build()
 	case "REPLACE":
@@ -81,8 +81,8 @@ func mc2mc() error {
 			query.WithDestination(cfg.DestinationTableID),
 			query.WithOverridedValue("_partitiontime", fmt.Sprintf("TIMESTAMP('%s')", dstart)),
 			query.WithOverridedValue("_partitiondate", fmt.Sprintf("DATE(TIMESTAMP('%s'))", dstart)),
-			query.WithAutoPartition(cfg.DevEnableAutoPartition),
-			query.WithPartitionValue(cfg.DevEnablePartitionValue),
+			query.WithAutoPartition(cfg.DevEnableAutoPartition == "true"),
+			query.WithPartitionValue(cfg.DevEnablePartitionValue == "true"),
 			query.WithColumnOrder(),
 		).Build()
 	case "MERGE":

@@ -4,7 +4,9 @@ go 1.22.3
 
 require (
 	github.com/aliyun/aliyun-odps-go-sdk v0.3.15
+	github.com/caarlos0/env/v11 v11.3.1
 	github.com/pkg/errors v0.9.1
+	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/contrib/instrumentation/runtime v0.58.0
 	go.opentelemetry.io/otel v1.33.0

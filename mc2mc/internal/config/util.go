@@ -3,37 +3,45 @@ package config
 import (
 	"os"
 	"strings"
-	"time"
+
+	"github.com/caarlos0/env/v11"
 )
 
-func getEnv(key, fallback string) string {
-	if value, ok := os.LookupEnv(key); ok {
-		return value
+// parse parses the environment variables and returns the configuration.
+func parse[T any](envs ...string) (*T, error) {
+	env0 := toMap(os.Environ())
+	env1 := toMap(envs)
+
+	c, err := env.ParseAsWithOptions[T](env.Options{
+		Environment: mergeMaps(env0, env1),
+	})
+	if err != nil {
+		return nil, err
 	}
-	return fallback
+	return &c, nil
 }
 
-func getEnvDuration(key, fallback string) time.Duration {
-	result, _ := time.ParseDuration(getEnv(key, fallback))
-	return result
-}
-
-// specific to parse job name from JOB_LABELS environment variable
-// later on this should be refactored properly
-func getJobName() string {
-	return parseLabels("job_name")
-}
-
-// specific parsing for JOB_LABELS environment variable
-// later on this should be refactored properly
-func parseLabels(key string) string {
-	labels := strings.Split(getEnv("JOB_LABELS", ""), ",")
-	// parse label from JOB_LABELS based on key
-	for _, label := range labels {
-		parsed := strings.Split(label, "=")
-		if len(parsed) == 2 && parsed[0] == key {
-			return parsed[1]
+// toMap converts the environment variables to a map.
+// for example "KEY=VALUE" to map["KEY"] = "VALUE".
+func toMap(env []string) map[string]string {
+	r := map[string]string{}
+	for _, e := range env {
+		p := strings.SplitN(e, "=", 2)
+		if len(p) == 2 {
+			r[p[0]] = p[1]
 		}
 	}
-	return ""
+	return r
+}
+
+// mergeMaps merges multiple maps into one.
+// If there are duplicate keys, the value from the last map will be used.
+func mergeMaps(maps ...map[string]string) map[string]string {
+	r := map[string]string{}
+	for _, m := range maps {
+		for k, v := range m {
+			r[k] = v
+		}
+	}
+	return r
 }
