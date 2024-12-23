@@ -37,7 +37,7 @@ func mc2mc() error {
 	c, err := client.NewClient(
 		ctx,
 		client.SetupLogger(l),
-		client.SetupOTelSDK(cfg.OtelCollectorGRPCEndpoint, cfg.JobName, cfg.ScheduledTime),
+		client.SetupOTelSDK(cfg.OtelCollectorGRPCEndpoint, cfg.OtelCollectorGRPCEndpoint),
 		client.SetupODPSClient(cfg.GenOdps()),
 	)
 	if err != nil {

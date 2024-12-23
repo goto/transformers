@@ -14,6 +14,7 @@ type Config struct {
 	QueryFilePath             string
 	DestinationTableID        string
 	OtelCollectorGRPCEndpoint string
+	OtelAttributes            string
 	JobName                   string
 	ScheduledTime             string
 	DStart                    string
@@ -39,6 +40,7 @@ func NewConfig() (*Config, error) {
 		DestinationTableID: getEnv("DESTINATION_TABLE_ID", ""),
 		// system related config
 		OtelCollectorGRPCEndpoint: getEnv("OTEL_COLLECTOR_GRPC_ENDPOINT", ""),
+		OtelAttributes:            getEnv("OTEL_ATTRIBUTES", ""),
 		JobName:                   getJobName(),
 		ScheduledTime:             getEnv("SCHEDULED_TIME", ""),
 		DStart:                    getEnv("DSTART", ""),
