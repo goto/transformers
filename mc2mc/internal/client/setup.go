@@ -2,6 +2,7 @@ package client
 
 import (
 	"log/slog"
+	"strings"
 
 	"github.com/aliyun/aliyun-odps-go-sdk/odps"
 	"github.com/pkg/errors"
@@ -23,12 +24,20 @@ func SetupODPSClient(odpsClient *odps.Odps) SetupFn {
 	}
 }
 
-func SetupOTelSDK(collectorGRPCEndpoint, jobName, scheduledTime string) SetupFn {
+func SetupOTelSDK(collectorGRPCEndpoint string, otelAttributes string) SetupFn {
 	return func(c *Client) error {
 		if collectorGRPCEndpoint == "" {
 			return nil
 		}
-		shutdownFn, err := setupOTelSDK(c.appCtx, collectorGRPCEndpoint, jobName, scheduledTime)
+		attrSlice := strings.Split(otelAttributes, ",")
+		attr := make(map[string]string, len(attrSlice))
+		for _, a := range attrSlice {
+			kv := strings.Split(a, "=")
+			if len(kv) == 2 {
+				attr[kv[0]] = kv[1]
+			}
+		}
+		shutdownFn, err := setupOTelSDK(c.appCtx, collectorGRPCEndpoint, attr)
 		if err != nil {
 			return errors.WithStack(err)
 		}

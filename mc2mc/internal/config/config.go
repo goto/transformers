@@ -7,19 +7,46 @@ import (
 	"github.com/pkg/errors"
 )
 
+// ConfigEnv is a mc configuration for the component.
+type ConfigEnv struct {
+	LogLevel                  string `env:"LOG_LEVEL" envDefault:"INFO"`
+	OtelCollectorGRPCEndpoint string `env:"OTEL_COLLECTOR_GRPC_ENDPOINT"`
+	OtelAttributes            string `env:"OTEL_ATTRIBUTES"`
+	MCServiceAccount          string `env:"MC_SERVICE_ACCOUNT"`
+	LoadMethod                string `env:"LOAD_METHOD" envDefault:"APPEND"`
+	QueryFilePath             string `env:"QUERY_FILE_PATH" envDefault:"/data/in/query.sql"`
+	DestinationTableID        string `env:"DESTINATION_TABLE_ID"`
+	DStart                    string `env:"DSTART"`
+	// TODO: delete this
+	DevEnablePartitionValue string `env:"DEV__ENABLE_PARTITION_VALUE" envDefault:"false"`
+	DevEnableAutoPartition  string `env:"DEV__ENABLE_AUTO_PARTITION" envDefault:"false"`
+}
+
 type Config struct {
 	*odps.Config
-	LogLevel                  string
-	LoadMethod                string
-	QueryFilePath             string
-	DestinationTableID        string
-	OtelCollectorGRPCEndpoint string
-	JobName                   string
-	ScheduledTime             string
-	DStart                    string
-	// TODO: remove this temporary support after 15 nov 2024
-	DevEnablePartitionValue bool
-	DevEnableAutoPartition  bool
+	*ConfigEnv
+}
+
+// NewConfig parses the environment variables and returns the mc configuration.
+func NewConfig(envs ...string) (*Config, error) {
+	configEnv, err := parse[ConfigEnv](envs...)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	cred, err := collectMaxComputeCredential([]byte(configEnv.MCServiceAccount))
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	cfg := &Config{
+		Config:    &odps.Config{},
+		ConfigEnv: configEnv,
+	}
+	cfg.Config.AccessId = cred.AccessId
+	cfg.Config.AccessKey = cred.AccessKey
+	cfg.Config.Endpoint = cred.Endpoint
+	cfg.Config.ProjectName = cred.ProjectName
+
+	return cfg, nil
 }
 
 type maxComputeCredentials struct {
@@ -27,39 +54,6 @@ type maxComputeCredentials struct {
 	AccessKey   string `json:"access_key"`
 	Endpoint    string `json:"endpoint"`
 	ProjectName string `json:"project_name"`
-}
-
-func NewConfig() (*Config, error) {
-	cfg := &Config{
-		Config: odps.NewConfig(),
-		// mc2mc related config
-		LogLevel:           getEnv("LOG_LEVEL", "INFO"),
-		LoadMethod:         getEnv("LOAD_METHOD", "APPEND"),
-		QueryFilePath:      getEnv("QUERY_FILE_PATH", "/data/in/query.sql"),
-		DestinationTableID: getEnv("DESTINATION_TABLE_ID", ""),
-		// system related config
-		OtelCollectorGRPCEndpoint: getEnv("OTEL_COLLECTOR_GRPC_ENDPOINT", ""),
-		JobName:                   getJobName(),
-		ScheduledTime:             getEnv("SCHEDULED_TIME", ""),
-		DStart:                    getEnv("DSTART", ""),
-		// TODO: delete this after 15 nov
-		DevEnablePartitionValue: getEnv("DEV__ENABLE_PARTITION_VALUE", "false") == "true",
-		DevEnableAutoPartition:  getEnv("DEV__ENABLE_AUTO_PARTITION", "false") == "true",
-	}
-	// ali-odps-go-sdk related config
-	scvAcc := getEnv("MC_SERVICE_ACCOUNT", "")
-	cred, err := collectMaxComputeCredential([]byte(scvAcc))
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	cfg.Config.AccessId = cred.AccessId
-	cfg.Config.AccessKey = cred.AccessKey
-	cfg.Config.Endpoint = cred.Endpoint
-	cfg.Config.ProjectName = cred.ProjectName
-	cfg.Config.HttpTimeout = getEnvDuration("MC_HTTP_TIMEOUT", "10s")
-	cfg.Config.TcpConnectionTimeout = getEnvDuration("MC_TCP_TIMEOUT", "30s")
-
-	return cfg, nil
 }
 
 func collectMaxComputeCredential(scvAcc []byte) (*maxComputeCredentials, error) {
