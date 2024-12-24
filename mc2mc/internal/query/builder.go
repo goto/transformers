@@ -65,14 +65,6 @@ func (b *Builder) Build() (string, error) {
 	var err error
 	hr, query := SeparateHeadersAndQuery(b.query)
 
-	// construct column order if enabled
-	if b.orderedColumns != nil {
-		query, err = b.constructColumnOrder(query)
-		if err != nil {
-			return "", errors.WithStack(err)
-		}
-	}
-
 	// construct overrided values if enabled
 	if b.overridedValues != nil {
 		query, err = b.constructOverridedValues(query)
@@ -81,7 +73,18 @@ func (b *Builder) Build() (string, error) {
 		}
 	}
 
+	// construct column order
+	if b.orderedColumns != nil {
+		query, err = b.constructColumnOrder(query)
+		if err != nil {
+			return "", errors.WithStack(err)
+		}
+	}
+
 	// construct partition value if enabled
+	// this is for temporary solution to support partition value
+	// partition value is a pseudo column __partitionvalue,
+	// so it's not part of the ordered columns
 	if b.enablePartitionValue && !b.enableAutoPartition {
 		query, err = b.constructPartitionValue(query)
 		if err != nil {
@@ -122,13 +125,15 @@ func (b *Builder) Build() (string, error) {
 
 // separateHeadersAndQuery separates headers and query from the given query
 func (b *Builder) constructColumnOrder(query string) (string, error) {
-	columns, err := b.client.GetOrderedColumns(b.destinationTableID)
-	if err != nil {
-		b.l.Error(fmt.Sprintf("failed to get ordered columns: %s", err.Error()))
-		return "", errors.WithStack(err)
+	if b.orderedColumns == nil || len(b.orderedColumns) == 0 {
+		columns, err := b.client.GetOrderedColumns(b.destinationTableID)
+		if err != nil {
+			b.l.Error(fmt.Sprintf("failed to get ordered columns: %s", err.Error()))
+			return "", errors.WithStack(err)
+		}
+		b.orderedColumns = columns
 	}
-	b.orderedColumns = columns
-	return fmt.Sprintf("SELECT %s FROM (%s)", strings.Join(columns, ", "), query), nil
+	return fmt.Sprintf("SELECT %s FROM (%s)", strings.Join(b.orderedColumns, ", "), query), nil
 }
 
 // constructPartitionValue constructs partition value for the given query
@@ -140,11 +145,17 @@ func (b *Builder) constructPartitionValue(query string) (string, error) {
 
 // constructOverridedValues constructs query with overrided values
 func (b *Builder) constructOverridedValues(query string) (string, error) {
-	if b.orderedColumns == nil {
-		return "", errors.New("ordered columns are required to construct overrided values")
+	if b.orderedColumns == nil || len(b.orderedColumns) == 0 {
+		columns, err := b.client.GetOrderedColumns(b.destinationTableID)
+		if err != nil {
+			b.l.Error(fmt.Sprintf("failed to get ordered columns: %s", err.Error()))
+			return "", errors.WithStack(err)
+		}
+		b.orderedColumns = columns
 	}
-	columns := b.orderedColumns
-	for i, col := range columns {
+	columns := make([]string, len(b.orderedColumns))
+	for i, col := range b.orderedColumns {
+		columns[i] = col
 		if val, ok := b.overridedValues[col]; ok {
 			columns[i] = fmt.Sprintf("%s as %s", val, col)
 		}
