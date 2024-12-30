@@ -98,7 +98,9 @@ func mc2mc(envs []string) error {
 		// if it contains break marker, it must uses window range greather than 1 day
 		// if table destination is partition table, then it will be replaced based on the partition date
 		// for non partition table, only last query will be applied
-		queries := strings.Split(string(raw), query.BREAK_MARKER)
+		rawQuery := string(raw)
+		l.Info(fmt.Sprintf("raw query: %s", rawQuery))
+		queries := strings.Split(rawQuery, query.BREAK_MARKER)
 		dates := []string{}
 		for i := start; i.Before(end); i = i.AddDate(0, 0, 1) {
 			dates = append(dates, i.Format(time.DateTime)) // normalize date format as temporary support

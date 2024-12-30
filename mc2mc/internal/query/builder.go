@@ -111,16 +111,16 @@ func (b *Builder) Build() (string, error) {
 	if len(partitionNames) == 0 || b.enableAutoPartition {
 		switch b.method {
 		case APPEND:
-			query = fmt.Sprintf("INSERT INTO TABLE %s %s;", b.destinationTableID, query)
+			query = fmt.Sprintf("INSERT INTO TABLE %s \n%s\n;", b.destinationTableID, query)
 		case REPLACE:
-			query = fmt.Sprintf("INSERT OVERWRITE TABLE %s %s;", b.destinationTableID, query)
+			query = fmt.Sprintf("INSERT OVERWRITE TABLE %s \n%s\n;", b.destinationTableID, query)
 		}
 	} else {
 		switch b.method {
 		case APPEND:
-			query = fmt.Sprintf("INSERT INTO TABLE %s PARTITION (%s) %s;", b.destinationTableID, strings.Join(partitionNames, ", "), query)
+			query = fmt.Sprintf("INSERT INTO TABLE %s PARTITION (%s) \n%s\n;", b.destinationTableID, strings.Join(partitionNames, ", "), query)
 		case REPLACE:
-			query = fmt.Sprintf("INSERT OVERWRITE TABLE %s PARTITION (%s) %s;", b.destinationTableID, strings.Join(partitionNames, ", "), query)
+			query = fmt.Sprintf("INSERT OVERWRITE TABLE %s PARTITION (%s) \n%s\n;", b.destinationTableID, strings.Join(partitionNames, ", "), query)
 		}
 	}
 
@@ -141,14 +141,14 @@ func (b *Builder) constructColumnOrder(query string) (string, error) {
 		}
 		b.orderedColumns = columns
 	}
-	return fmt.Sprintf("SELECT %s FROM (%s)", strings.Join(b.orderedColumns, ", "), query), nil
+	return fmt.Sprintf("SELECT %s FROM (\n%s\n)", strings.Join(b.orderedColumns, ", "), query), nil
 }
 
 // constructPartitionValue constructs partition value for the given query
 // by adding a pseudo column __partitionvalue with the current date
 // this is for temporary solution to support partition value
 func (b *Builder) constructPartitionValue(query string) (string, error) {
-	return fmt.Sprintf("SELECT *, STRING(CURRENT_DATE()) as __partitionvalue FROM (%s)", query), nil
+	return fmt.Sprintf("SELECT *, STRING(CURRENT_DATE()) as __partitionvalue FROM (\n%s\n)", query), nil
 }
 
 // constructOverridedValues constructs query with overrided values
@@ -168,5 +168,5 @@ func (b *Builder) constructOverridedValues(query string) (string, error) {
 			columns[i] = fmt.Sprintf("%s as %s", val, col)
 		}
 	}
-	return fmt.Sprintf("SELECT %s FROM (%s)", strings.Join(columns, ", "), query), nil
+	return fmt.Sprintf("SELECT %s FROM (\n%s\n)", strings.Join(columns, ", "), query), nil
 }
