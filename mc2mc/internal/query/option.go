@@ -2,6 +2,12 @@ package query
 
 type Option func(*Builder)
 
+func WithQuery(query string) Option {
+	return func(b *Builder) {
+		b.query = query
+	}
+}
+
 func WithMethod(method Method) Option {
 	return func(b *Builder) {
 		b.method = method
@@ -38,5 +44,11 @@ func WithOverridedValue(field, value string) Option {
 			b.overridedValues = make(map[string]string)
 		}
 		b.overridedValues[field] = value
+	}
+}
+
+func WithMultiQueryPartition(marker, start, end string) Option {
+	return func(b *Builder) {
+
 	}
 }
