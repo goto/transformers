@@ -10,6 +10,16 @@ import (
 )
 
 func TestBuilder_Build(t *testing.T) {
+	t.Run("returns error for empty query", func(t *testing.T) {
+		odspClient := &mockOdpsClient{}
+
+		queryToExecute, err := query.NewBuilder(
+			logger.NewDefaultLogger(),
+			odspClient,
+		).Build()
+		assert.Error(t, err)
+		assert.Empty(t, queryToExecute)
+	})
 	t.Run("returns query for merge load method", func(t *testing.T) {
 		queryToExecute := `select * from project.playground.table;`
 		odspClient := &mockOdpsClient{}
@@ -17,7 +27,7 @@ func TestBuilder_Build(t *testing.T) {
 		query, err := query.NewBuilder(
 			logger.NewDefaultLogger(),
 			odspClient,
-			queryToExecute,
+			query.WithQuery(queryToExecute),
 			query.WithMethod(query.MERGE),
 		).Build()
 		assert.NoError(t, err)
@@ -30,7 +40,7 @@ func TestBuilder_Build(t *testing.T) {
 		queryToExecute, err := query.NewBuilder(
 			logger.NewDefaultLogger(),
 			odspClient,
-			queryToExecute,
+			query.WithQuery(queryToExecute),
 			query.WithMethod(query.APPEND),
 		).Build()
 
@@ -49,7 +59,7 @@ func TestBuilder_Build(t *testing.T) {
 		queryToExecute, err := query.NewBuilder(
 			logger.NewDefaultLogger(),
 			odspClient,
-			queryToExecute,
+			query.WithQuery(queryToExecute),
 			query.WithMethod(query.APPEND),
 			query.WithDestination(destinationTableID),
 			query.WithColumnOrder(),
@@ -73,7 +83,7 @@ func TestBuilder_Build(t *testing.T) {
 		queryToExecute, err := query.NewBuilder(
 			logger.NewDefaultLogger(),
 			odspClient,
-			queryToExecute,
+			query.WithQuery(queryToExecute),
 			query.WithMethod(query.APPEND),
 			query.WithDestination(destinationTableID),
 			query.WithOverridedValue("_partitiontime", "TIMESTAMP('2021-01-01')"),
@@ -98,7 +108,7 @@ func TestBuilder_Build(t *testing.T) {
 		queryToExecute, err := query.NewBuilder(
 			logger.NewDefaultLogger(),
 			odspClient,
-			queryToExecute,
+			query.WithQuery(queryToExecute),
 			query.WithMethod(query.APPEND),
 			query.WithDestination(destinationTableID),
 			query.WithOverridedValue("_partitiontime", "TIMESTAMP('2021-01-01')"),
@@ -122,7 +132,7 @@ func TestBuilder_Build(t *testing.T) {
 		queryToExecute, err := query.NewBuilder(
 			logger.NewDefaultLogger(),
 			odspClient,
-			queryToExecute,
+			query.WithQuery(queryToExecute),
 			query.WithMethod(query.APPEND),
 			query.WithDestination(destinationTableID),
 			query.WithOverridedValue("_partitiontime", "TIMESTAMP('2021-01-01')"),
@@ -148,7 +158,7 @@ func TestBuilder_Build(t *testing.T) {
 		queryToExecute, err := query.NewBuilder(
 			logger.NewDefaultLogger(),
 			odspClient,
-			queryToExecute,
+			query.WithQuery(queryToExecute),
 			query.WithMethod(query.APPEND),
 			query.WithDestination(destinationTableID),
 			query.WithOverridedValue("_partitiontime", "TIMESTAMP('2021-01-01')"),
@@ -175,7 +185,7 @@ func TestBuilder_Build(t *testing.T) {
 		queryToExecute, err := query.NewBuilder(
 			logger.NewDefaultLogger(),
 			odspClient,
-			queryToExecute,
+			query.WithQuery(queryToExecute),
 			query.WithMethod(query.APPEND),
 			query.WithDestination(destinationTableID),
 			query.WithOverridedValue("_partitiontime", "TIMESTAMP('2021-01-01')"),
@@ -200,7 +210,7 @@ func TestBuilder_Build(t *testing.T) {
 		queryToExecute, err := query.NewBuilder(
 			logger.NewDefaultLogger(),
 			odspClient,
-			queryToExecute,
+			query.WithQuery(queryToExecute),
 			query.WithMethod(query.APPEND),
 			query.WithDestination(destinationTableID),
 			query.WithOverridedValue("_partitiontime", "TIMESTAMP('2021-01-01')"),
@@ -226,7 +236,7 @@ func TestBuilder_Build(t *testing.T) {
 		queryToExecute, err := query.NewBuilder(
 			logger.NewDefaultLogger(),
 			odspClient,
-			queryToExecute,
+			query.WithQuery(queryToExecute),
 			query.WithMethod(query.APPEND),
 			query.WithDestination(destinationTableID),
 			query.WithOverridedValue("_partitiontime", "TIMESTAMP('2021-01-01')"),
@@ -254,7 +264,7 @@ func TestBuilder_Build(t *testing.T) {
 		queryToExecute, err := query.NewBuilder(
 			logger.NewDefaultLogger(),
 			odspClient,
-			queryToExecute,
+			query.WithQuery(queryToExecute),
 			query.WithMethod(query.REPLACE),
 			query.WithDestination(destinationTableID),
 			query.WithOverridedValue("_partitiontime", "TIMESTAMP('2021-01-01')"),

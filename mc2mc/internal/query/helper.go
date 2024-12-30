@@ -5,6 +5,10 @@ import (
 	"strings"
 )
 
+const (
+	BREAK_MARKER = "--*--optimus-break-marker--*--"
+)
+
 var (
 	headerPattern = regexp.MustCompile(`(?i)^\s*set\s+[^;]+;`) // regex to match header statements
 )

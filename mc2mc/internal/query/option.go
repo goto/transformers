@@ -2,6 +2,12 @@ package query
 
 type Option func(*Builder)
 
+func WithQuery(query string) Option {
+	return func(b *Builder) {
+		b.query = query
+	}
+}
+
 func WithMethod(method Method) Option {
 	return func(b *Builder) {
 		b.method = method
