@@ -17,6 +17,7 @@ type ConfigEnv struct {
 	QueryFilePath             string `env:"QUERY_FILE_PATH" envDefault:"/data/in/query.sql"`
 	DestinationTableID        string `env:"DESTINATION_TABLE_ID"`
 	DStart                    string `env:"DSTART"`
+	DEnd                      string `env:"DEND"`
 	// TODO: delete this
 	DevEnablePartitionValue string `env:"DEV__ENABLE_PARTITION_VALUE" envDefault:"false"`
 	DevEnableAutoPartition  string `env:"DEV__ENABLE_AUTO_PARTITION" envDefault:"false"`

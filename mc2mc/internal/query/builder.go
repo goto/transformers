@@ -32,11 +32,10 @@ type Builder struct {
 }
 
 // NewBuilder creates a new query builder with the given options
-func NewBuilder(l *slog.Logger, client OdpsClient, query string, options ...Option) *Builder {
+func NewBuilder(l *slog.Logger, client OdpsClient, options ...Option) *Builder {
 	b := &Builder{
 		l:                    l,
 		client:               client,
-		query:                query,
 		method:               MERGE, // default method (script)
 		destinationTableID:   "",
 		orderedColumns:       nil,
@@ -44,6 +43,11 @@ func NewBuilder(l *slog.Logger, client OdpsClient, query string, options ...Opti
 		enableAutoPartition:  false,
 		enablePartitionValue: false,
 	}
+	return b.SetOptions(options...)
+}
+
+// SetOption sets the given option to the builder
+func (b *Builder) SetOptions(options ...Option) *Builder {
 	for _, opt := range options {
 		opt(b)
 	}
@@ -52,6 +56,10 @@ func NewBuilder(l *slog.Logger, client OdpsClient, query string, options ...Opti
 
 // Build constructs the final query with the given options
 func (b *Builder) Build() (string, error) {
+	if b.query == "" {
+		return "", errors.New("query is required")
+	}
+
 	// merge method is a script, no need to construct query
 	if b.method == MERGE {
 		return b.query, nil
