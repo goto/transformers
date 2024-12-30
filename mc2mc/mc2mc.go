@@ -115,7 +115,7 @@ func mc2mc(envs []string) error {
 				query.WithOverridedValue("_partitiondate", fmt.Sprintf("DATE(TIMESTAMP('%s'))", dates[i])),
 			).Build()
 			if err != nil {
-				break
+				return errors.WithStack(err)
 			}
 			queriesToExecute = append(queriesToExecute, queryToExecute)
 		}
