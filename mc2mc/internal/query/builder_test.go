@@ -91,7 +91,13 @@ func TestBuilder_Build(t *testing.T) {
 		).Build()
 
 		assert.NoError(t, err)
-		assert.Equal(t, `INSERT INTO TABLE project.playground.table_destination SELECT col1, col2, _partitiontime FROM (SELECT col1, col2, TIMESTAMP('2021-01-01') as _partitiontime FROM (select * from project.playground.table));`, queryToExecute)
+		assert.Equal(t, `INSERT INTO TABLE project.playground.table_destination 
+SELECT col1, col2, _partitiontime FROM (
+SELECT col1, col2, TIMESTAMP('2021-01-01') as _partitiontime FROM (
+select * from project.playground.table
+)
+)
+;`, queryToExecute)
 	})
 	t.Run("returns query for append load method when contains overrided values but no column order", func(t *testing.T) {
 		queryToExecute := `select * from project.playground.table;`
@@ -115,7 +121,13 @@ func TestBuilder_Build(t *testing.T) {
 		).Build()
 
 		assert.NoError(t, err)
-		assert.Equal(t, `INSERT INTO TABLE project.playground.table_destination SELECT col1, col2, _partitiontime FROM (SELECT col1, col2, TIMESTAMP('2021-01-01') as _partitiontime FROM (select * from project.playground.table));`, queryToExecute)
+		assert.Equal(t, `INSERT INTO TABLE project.playground.table_destination 
+SELECT col1, col2, _partitiontime FROM (
+SELECT col1, col2, TIMESTAMP('2021-01-01') as _partitiontime FROM (
+select * from project.playground.table
+)
+)
+;`, queryToExecute)
 	})
 	t.Run("returns query for append load method when temporary partition_value enable", func(t *testing.T) {
 		queryToExecute := `select * from project.playground.table;`
@@ -141,7 +153,15 @@ func TestBuilder_Build(t *testing.T) {
 		).Build()
 
 		assert.NoError(t, err)
-		assert.Equal(t, `INSERT INTO TABLE project.playground.table_destination SELECT *, STRING(CURRENT_DATE()) as __partitionvalue FROM (SELECT col1, col2, _partitiontime FROM (SELECT col1, col2, TIMESTAMP('2021-01-01') as _partitiontime FROM (select * from project.playground.table)));`, queryToExecute)
+		assert.Equal(t, `INSERT INTO TABLE project.playground.table_destination 
+SELECT *, STRING(CURRENT_DATE()) as __partitionvalue FROM (
+SELECT col1, col2, _partitiontime FROM (
+SELECT col1, col2, TIMESTAMP('2021-01-01') as _partitiontime FROM (
+select * from project.playground.table
+)
+)
+)
+;`, queryToExecute)
 	})
 	t.Run("returns query for append load method when auto partition enable", func(t *testing.T) {
 		queryToExecute := `select * from project.playground.table;`
@@ -168,7 +188,13 @@ func TestBuilder_Build(t *testing.T) {
 		).Build()
 
 		assert.NoError(t, err)
-		assert.Equal(t, `INSERT INTO TABLE project.playground.table_destination SELECT col1, col2, _partitiontime FROM (SELECT col1, col2, TIMESTAMP('2021-01-01') as _partitiontime FROM (select * from project.playground.table));`, queryToExecute)
+		assert.Equal(t, `INSERT INTO TABLE project.playground.table_destination 
+SELECT col1, col2, _partitiontime FROM (
+SELECT col1, col2, TIMESTAMP('2021-01-01') as _partitiontime FROM (
+select * from project.playground.table
+)
+)
+;`, queryToExecute)
 	})
 	t.Run("returns query for append load method for partition table", func(t *testing.T) {
 		queryToExecute := `select * from project.playground.table;`
@@ -193,7 +219,13 @@ func TestBuilder_Build(t *testing.T) {
 		).Build()
 
 		assert.NoError(t, err)
-		assert.Equal(t, `INSERT INTO TABLE project.playground.table_destination PARTITION (col3) SELECT col1, col2, _partitiontime FROM (SELECT col1, col2, TIMESTAMP('2021-01-01') as _partitiontime FROM (select * from project.playground.table));`, queryToExecute)
+		assert.Equal(t, `INSERT INTO TABLE project.playground.table_destination PARTITION (col3) 
+SELECT col1, col2, _partitiontime FROM (
+SELECT col1, col2, TIMESTAMP('2021-01-01') as _partitiontime FROM (
+select * from project.playground.table
+)
+)
+;`, queryToExecute)
 	})
 	t.Run("returns query for append load method for partition table but autopartition enable", func(t *testing.T) {
 		queryToExecute := `select * from project.playground.table;`
@@ -219,7 +251,13 @@ func TestBuilder_Build(t *testing.T) {
 		).Build()
 
 		assert.NoError(t, err)
-		assert.Equal(t, `INSERT INTO TABLE project.playground.table_destination SELECT col1, col2, _partitiontime FROM (SELECT col1, col2, TIMESTAMP('2021-01-01') as _partitiontime FROM (select * from project.playground.table));`, queryToExecute)
+		assert.Equal(t, `INSERT INTO TABLE project.playground.table_destination 
+SELECT col1, col2, _partitiontime FROM (
+SELECT col1, col2, TIMESTAMP('2021-01-01') as _partitiontime FROM (
+select * from project.playground.table
+)
+)
+;`, queryToExecute)
 	})
 	t.Run("returns query for append load method", func(t *testing.T) {
 		queryToExecute := `select * from project.playground.table;`
@@ -247,7 +285,13 @@ func TestBuilder_Build(t *testing.T) {
 		).Build()
 
 		assert.NoError(t, err)
-		assert.Equal(t, `INSERT INTO TABLE project.playground.table_destination SELECT col1, col2, _partitiontime FROM (SELECT col1, col2, TIMESTAMP('2021-01-01') as _partitiontime FROM (select * from project.playground.table));`, queryToExecute)
+		assert.Equal(t, `INSERT INTO TABLE project.playground.table_destination 
+SELECT col1, col2, _partitiontime FROM (
+SELECT col1, col2, TIMESTAMP('2021-01-01') as _partitiontime FROM (
+select * from project.playground.table
+)
+)
+;`, queryToExecute)
 	})
 	t.Run("returns query for replace load method", func(t *testing.T) {
 		queryToExecute := `select * from project.playground.table;`
@@ -275,7 +319,49 @@ func TestBuilder_Build(t *testing.T) {
 		).Build()
 
 		assert.NoError(t, err)
-		assert.Equal(t, `INSERT OVERWRITE TABLE project.playground.table_destination SELECT col1, col2, _partitiontime FROM (SELECT col1, col2, TIMESTAMP('2021-01-01') as _partitiontime FROM (select * from project.playground.table));`, queryToExecute)
+		assert.Equal(t, `INSERT OVERWRITE TABLE project.playground.table_destination 
+SELECT col1, col2, _partitiontime FROM (
+SELECT col1, col2, TIMESTAMP('2021-01-01') as _partitiontime FROM (
+select * from project.playground.table
+)
+)
+;`, queryToExecute)
+	})
+	t.Run("returns query for replace load method with comment in the end", func(t *testing.T) {
+		queryToExecute := `select * from project.playground.table
+-- this is comment`
+		odspClient := &mockOdpsClient{
+			orderedColumns: func() ([]string, error) {
+				return []string{"col1", "col2", "_partitiontime"}, nil
+			},
+			partitionResult: func() ([]string, error) {
+				return []string{"col3"}, nil
+			},
+		}
+		destinationTableID := "project.playground.table_destination"
+
+		queryToExecute, err := query.NewBuilder(
+			logger.NewDefaultLogger(),
+			odspClient,
+			query.WithQuery(queryToExecute),
+			query.WithMethod(query.REPLACE),
+			query.WithDestination(destinationTableID),
+			query.WithOverridedValue("_partitiontime", "TIMESTAMP('2021-01-01')"),
+			query.WithOverridedValue("_partitiondate", "DATE(TIMESTAMP('2021-01-01'))"),
+			query.WithAutoPartition(true),
+			query.WithPartitionValue(true),
+			query.WithColumnOrder(),
+		).Build()
+
+		assert.NoError(t, err)
+		assert.Equal(t, `INSERT OVERWRITE TABLE project.playground.table_destination 
+SELECT col1, col2, _partitiontime FROM (
+SELECT col1, col2, TIMESTAMP('2021-01-01') as _partitiontime FROM (
+select * from project.playground.table
+-- this is comment
+)
+)
+;`, queryToExecute)
 	})
 }
 
