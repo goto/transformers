@@ -3,7 +3,7 @@ module github.com/goto/transformers/mc2mc
 go 1.22.3
 
 require (
-	github.com/aliyun/aliyun-odps-go-sdk v0.4.0
+	github.com/aliyun/aliyun-odps-go-sdk v0.4.1
 	github.com/caarlos0/env/v11 v11.3.1
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/pflag v1.0.5
