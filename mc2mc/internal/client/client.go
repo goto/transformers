@@ -46,7 +46,7 @@ func (c *Client) Close() error {
 
 func (c *Client) Execute(ctx context.Context, query string) error {
 	// execute query with odps client
-	c.logger.Info(fmt.Sprintf("execute: %s", query))
+	c.logger.Info(fmt.Sprintf("query to execute:\n%s", query))
 	if err := c.OdpsClient.ExecSQL(ctx, query); err != nil {
 		return errors.WithStack(err)
 	}
