@@ -18,6 +18,7 @@ type ConfigEnv struct {
 	DestinationTableID        string `env:"DESTINATION_TABLE_ID"`
 	DStart                    string `env:"DSTART"`
 	DEnd                      string `env:"DEND"`
+	ExecutionProject          string `env:"EXECUTION_PROJECT"`
 	// TODO: delete this
 	DevEnablePartitionValue string `env:"DEV__ENABLE_PARTITION_VALUE" envDefault:"false"`
 	DevEnableAutoPartition  string `env:"DEV__ENABLE_AUTO_PARTITION" envDefault:"false"`

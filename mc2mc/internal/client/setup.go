@@ -10,6 +10,16 @@ import (
 
 type SetupFn func(c *Client) error
 
+func SetupDefaultProject(project string) SetupFn {
+	return func(c *Client) error {
+		if c.OdpsClient == nil {
+			return errors.New("odps client is required")
+		}
+		c.OdpsClient.SetDefaultProject(project)
+		return nil
+	}
+}
+
 func SetupLogger(logger *slog.Logger) SetupFn {
 	return func(c *Client) error {
 		c.logger = logger

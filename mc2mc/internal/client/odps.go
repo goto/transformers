@@ -54,6 +54,11 @@ func (c *odpsClient) ExecSQL(ctx context.Context, query string) error {
 	}
 }
 
+// SetDefaultProject sets the default project of the odps client
+func (c *odpsClient) SetDefaultProject(project string) {
+	c.client.SetDefaultProjectName(project)
+}
+
 // GetPartitionNames returns the partition names of the given table
 // by querying the table schema.
 func (c *odpsClient) GetPartitionNames(_ context.Context, tableID string) ([]string, error) {
