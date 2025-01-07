@@ -15,6 +15,9 @@ func SetupDefaultProject(project string) SetupFn {
 		if c.OdpsClient == nil {
 			return errors.New("odps client is required")
 		}
+		if project == "" {
+			return nil
+		}
 		c.OdpsClient.SetDefaultProject(project)
 		return nil
 	}
