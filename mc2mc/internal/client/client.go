@@ -11,6 +11,7 @@ import (
 
 type OdpsClient interface {
 	ExecSQL(ctx context.Context, query string) error
+	SetDefaultProject(project string)
 }
 
 type Client struct {
