@@ -19,6 +19,7 @@ type ConfigEnv struct {
 	DStart                    string `env:"DSTART"`
 	DEnd                      string `env:"DEND"`
 	ExecutionProject          string `env:"EXECUTION_PROJECT"`
+	LogViewRetentionInDays    int    `env:"LOG_VIEW_RETENTION_IN_DAYS" envDefault:"2"`
 	// TODO: delete this
 	DevEnablePartitionValue string `env:"DEV__ENABLE_PARTITION_VALUE" envDefault:"false"`
 	DevEnableAutoPartition  string `env:"DEV__ENABLE_AUTO_PARTITION" envDefault:"false"`

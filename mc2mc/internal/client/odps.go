@@ -14,13 +14,16 @@ import (
 type odpsClient struct {
 	logger *slog.Logger
 	client *odps.Odps
+
+	logViewRetentionInDays int
 }
 
 // NewODPSClient creates a new odpsClient instance
 func NewODPSClient(logger *slog.Logger, client *odps.Odps) *odpsClient {
 	return &odpsClient{
-		logger: logger,
-		client: client,
+		logger:                 logger,
+		client:                 client,
+		logViewRetentionInDays: 2,
 	}
 }
 
@@ -35,7 +38,7 @@ func (c *odpsClient) ExecSQL(ctx context.Context, query string) error {
 	}
 
 	// generate log view
-	url, err := odps.NewLogView(c.client).GenerateLogView(taskIns, 48)
+	url, err := odps.NewLogView(c.client).GenerateLogView(taskIns, c.logViewRetentionInDays*24)
 	if err != nil {
 		err = e.Join(err, taskIns.Terminate())
 		return errors.WithStack(err)
@@ -52,6 +55,11 @@ func (c *odpsClient) ExecSQL(ctx context.Context, query string) error {
 	case err := <-wait(taskIns):
 		return errors.WithStack(err)
 	}
+}
+
+// SetLogViewRetentionInDays sets the log view retention in days
+func (c *odpsClient) SetLogViewRetentionInDays(days int) {
+	c.logViewRetentionInDays = days
 }
 
 // SetDefaultProject sets the default project of the odps client
