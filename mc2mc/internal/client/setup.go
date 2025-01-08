@@ -10,6 +10,18 @@ import (
 
 type SetupFn func(c *Client) error
 
+func SetUpLogViewRetentionInDays(days int) SetupFn {
+	return func(c *Client) error {
+		if c.OdpsClient == nil {
+			return errors.New("odps client is required")
+		}
+		if days > 0 {
+			c.OdpsClient.SetLogViewRetentionInDays(days)
+		}
+		return nil
+	}
+}
+
 func SetupDefaultProject(project string) SetupFn {
 	return func(c *Client) error {
 		if c.OdpsClient == nil {
