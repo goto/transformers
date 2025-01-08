@@ -35,7 +35,7 @@ func (c *odpsClient) ExecSQL(ctx context.Context, query string) error {
 	}
 
 	// generate log view
-	url, err := odps.NewLogView(c.client).GenerateLogView(taskIns, 1)
+	url, err := odps.NewLogView(c.client).GenerateLogView(taskIns, 48)
 	if err != nil {
 		err = e.Join(err, taskIns.Terminate())
 		return errors.WithStack(err)
