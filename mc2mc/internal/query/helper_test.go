@@ -64,4 +64,30 @@ select CONCAT_WS('; ', COLLECT_LIST(dates)) AS dates from presentation.main.impo
 		expectedQuery := `select CONCAT_WS('; ', COLLECT_LIST(dates)) AS dates from presentation.main.important_date`
 		assert.Equal(t, expectedQuery, query)
 	})
+	t.Run("works with query with comment on header", func(t *testing.T) {
+		q1 := `set odps.sql.allow.fullscan=true;
+-- comment here
+set odps.sql.python.version=cp37;
+
+select distinct event_timestamp,
+                client_id,
+                country_code,
+from presentation.main.important_date
+where CAST(event_timestamp as DATE) = '{{ .DSTART | Date }}'
+  and client_id in ('123')
+`
+		headers, query := query.SeparateHeadersAndQuery(q1)
+		expectedHeader := `set odps.sql.allow.fullscan=true;
+set odps.sql.python.version=cp37;`
+		assert.Equal(t, expectedHeader, headers)
+
+		expectedQuery := `-- comment here
+select distinct event_timestamp,
+                client_id,
+                country_code,
+from presentation.main.important_date
+where CAST(event_timestamp as DATE) = '{{ .DSTART | Date }}'
+  and client_id in ('123')`
+		assert.Contains(t, expectedQuery, query)
+	})
 }
