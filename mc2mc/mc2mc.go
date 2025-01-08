@@ -104,8 +104,8 @@ func mc2mc(envs []string) error {
 		for i := start; i.Before(end); i = i.AddDate(0, 0, 1) {
 			dates = append(dates, i.Format(time.DateTime)) // normalize date format as temporary support
 		}
-		// if window size is less than or equal to partition delta(a DAY), then uses the same date
-		if end.Sub(start) <= time.Hour*24 {
+		// if window size is less than partition delta(a DAY), then uses the same date
+		if end.Sub(start) < time.Hour*24 {
 			dates = append(dates, start.Format(time.DateTime)) // normalize date format as temporary support
 		}
 
