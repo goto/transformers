@@ -10,27 +10,22 @@ const (
 )
 
 var (
-	headerPattern = regexp.MustCompile(`(?i)^\s*set\s+[^;]+;`) // regex to match header statements
+	headerPattern = regexp.MustCompile(`(?im)^\s*set\s+[^;]+;\s*`) // regex to match header statements
 )
 
 func SeparateHeadersAndQuery(query string) (string, string) {
 	query = strings.TrimSpace(query)
 
-	headers := []string{}
-	remainingQuery := query
-
-	// keep matching header statements until there are no more
-	for {
-		match := headerPattern.FindString(remainingQuery)
-		if match == "" {
-			break
-		}
-		headers = append(headers, strings.TrimSpace(match))
-		remainingQuery = strings.TrimSpace(remainingQuery[len(match):])
-	}
+	// extract all header lines (SET statements and comments)
+	headers := headerPattern.FindAllString(query, -1)
+	// Remove all headers from the original query to get the remaining query
+	remainingQuery := strings.TrimSpace(headerPattern.ReplaceAllString(query, ""))
 
 	headerStr := ""
 	if len(headers) > 0 {
+		for i, header := range headers {
+			headers[i] = strings.TrimSpace(header)
+		}
 		headerStr = strings.Join(headers, "\n")
 	}
 
