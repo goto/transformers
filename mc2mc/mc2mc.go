@@ -86,6 +86,7 @@ func mc2mc(envs []string) error {
 		}
 		queriesToExecute = append(queriesToExecute, queryToExecute)
 	case "REPLACE":
+		dstart := start.Format(time.DateTime) // normalize date format as temporary support
 		queryBuilder := query.NewBuilder(
 			l,
 			client.NewODPSClient(l, cfg.GenOdps()),
@@ -95,6 +96,21 @@ func mc2mc(envs []string) error {
 			query.WithPartitionValue(cfg.DevEnablePartitionValue == "true"),
 			query.WithColumnOrder(),
 		)
+
+		// -- TODO(START): refactor this part --
+		// if multi query generation is disabled, then execute the query as is
+		if cfg.DisableMultiQueryGeneration {
+			queryToExecute, err := queryBuilder.SetOptions(
+				query.WithQuery(string(raw)),
+				query.WithOverridedValue("_partitiontime", fmt.Sprintf("TIMESTAMP('%s')", dstart)),
+				query.WithOverridedValue("_partitiondate", fmt.Sprintf("DATE(TIMESTAMP('%s'))", dstart)),
+			).Build()
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			queriesToExecute = append(queriesToExecute, queryToExecute)
+			break
+		}
 
 		// generate queries for each date
 		// if it contains break marker, it must uses window range greater than 1 day
@@ -126,6 +142,7 @@ func mc2mc(envs []string) error {
 			}
 			queriesToExecute = append(queriesToExecute, queryToExecute)
 		}
+		// -- TODO(END): refactor this part --
 	case "MERGE":
 		queryToExecute, err := query.NewBuilder(
 			l,
