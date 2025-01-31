@@ -363,6 +363,66 @@ select * from project.playground.table
 )
 ;`, queryToExecute)
 	})
+	t.Run("returns query for merge load method with single dml", func(t *testing.T) {
+		queryToExecute := `SET odps.table.append2.enable=true;
+@src := SELECT 1 id;
+
+MERGE INTO append_test
+USING (SELECT * FROM @src) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 2;`
+		odspClient := &mockOdpsClient{}
+
+		query, err := query.NewBuilder(
+			logger.NewDefaultLogger(),
+			odspClient,
+			query.WithQuery(queryToExecute),
+			query.WithMethod(query.MERGE),
+		).Build()
+		assert.NoError(t, err)
+		assert.Equal(t, queryToExecute, query)
+	})
+	t.Run("returns query for merge load method with multiple dml and ddl", func(t *testing.T) {
+		queryToExecute := `SET odps.table.append2.enable=true;
+
+CREATE TABLE IF NOT EXISTS append_test (id bigint)
+TBLPROPERTIES('table.format.version'='2');
+
+INSERT OVERWRITE TABLE append_test VALUES(0),(1);
+
+@src := SELECT 1 id;
+
+MERGE INTO append_test
+USING (SELECT * FROM @src) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 2;`
+		odspClient := &mockOdpsClient{}
+
+		query, err := query.NewBuilder(
+			logger.NewDefaultLogger(),
+			odspClient,
+			query.WithQuery(queryToExecute),
+			query.WithMethod(query.MERGE),
+		).Build()
+		assert.NoError(t, err)
+		assert.Equal(t, `SET odps.table.append2.enable=true;
+CREATE TABLE IF NOT EXISTS append_test (id bigint)
+TBLPROPERTIES('table.format.version'='2');
+--*--optimus-break-marker--*--
+SET odps.table.append2.enable=true;
+@src := SELECT 1 id;
+INSERT OVERWRITE TABLE append_test VALUES(0),(1);
+--*--optimus-break-marker--*--
+SET odps.table.append2.enable=true;
+@src := SELECT 1 id;
+MERGE INTO append_test
+USING (SELECT * FROM @src) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 2;`, query)
+	})
 }
 
 type mockOdpsClient struct {

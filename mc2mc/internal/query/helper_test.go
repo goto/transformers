@@ -8,7 +8,7 @@ import (
 	"github.com/goto/transformers/mc2mc/internal/query"
 )
 
-func TestMacroSeparator(t *testing.T) {
+func TestSeparateHeadersAndQuery(t *testing.T) {
 	t.Run("returns query without macros", func(t *testing.T) {
 		q1 := `select * from playground`
 		macros, query := query.SeparateHeadersAndQuery(q1)
@@ -29,6 +29,21 @@ select * from playground`
 		headers, query := query.SeparateHeadersAndQuery(q1)
 		assert.Equal(t, "set odps.sql.allow.fullscan=true;", headers)
 		assert.Equal(t, "select * from playground", query)
+	})
+	t.Run("splits headers and query with set syntax", func(t *testing.T) {
+		q1 := `set odps.sql.allow.fullscan=true;
+MERGE INTO append_test
+USING (SELECT * FROM @src) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 2;`
+		headers, query := query.SeparateHeadersAndQuery(q1)
+		assert.Equal(t, "set odps.sql.allow.fullscan=true;", headers)
+		assert.Equal(t, `MERGE INTO append_test
+USING (SELECT * FROM @src) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 2`, query)
 	})
 	t.Run("works with query of multiple headers", func(t *testing.T) {
 		q1 := `set odps.sql.allow.fullscan=true;
@@ -78,16 +93,99 @@ where CAST(event_timestamp as DATE) = '{{ .DSTART | Date }}'
 `
 		headers, query := query.SeparateHeadersAndQuery(q1)
 		expectedHeader := `set odps.sql.allow.fullscan=true;
+-- comment here
 set odps.sql.python.version=cp37;`
 		assert.Equal(t, expectedHeader, headers)
 
-		expectedQuery := `-- comment here
-select distinct event_timestamp,
+		expectedQuery := `select distinct event_timestamp,
                 client_id,
                 country_code,
 from presentation.main.important_date
 where CAST(event_timestamp as DATE) = '{{ .DSTART | Date }}'
   and client_id in ('123')`
 		assert.Contains(t, expectedQuery, query)
+	})
+}
+
+func TestSeparateVariablesAndQuery(t *testing.T) {
+	t.Run("returns query without variables", func(t *testing.T) {
+		q1 := `MERGE INTO append_test
+USING (SELECT * FROM @src) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 2;`
+		variables, query := query.SeparateVariablesAndQuery(q1)
+		assert.Empty(t, variables)
+		assert.Equal(t, `MERGE INTO append_test
+USING (SELECT * FROM @src) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 2`, query)
+	})
+	t.Run("returns query removing whitespace", func(t *testing.T) {
+		q1 := `
+MERGE INTO append_test
+USING (SELECT * FROM @src) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 2;`
+
+		variables, query := query.SeparateVariablesAndQuery(q1)
+		assert.Empty(t, variables)
+		assert.Equal(t, `MERGE INTO append_test
+USING (SELECT * FROM @src) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 2`, query)
+	})
+	t.Run("splits variables and query", func(t *testing.T) {
+		q1 := `@src := SELECT 1 id;
+MERGE INTO append_test
+USING (SELECT * FROM @src) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 2;`
+		variables, query := query.SeparateVariablesAndQuery(q1)
+		assert.Equal(t, "@src := SELECT 1 id;", variables)
+		assert.Equal(t, `MERGE INTO append_test
+USING (SELECT * FROM @src) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 2`, query)
+	})
+	t.Run("splits multiline variables and queries", func(t *testing.T) {
+		q1 := `@src := SELECT id
+FROM src_table
+WHERE id = 1;
+@src2 := SELECT id
+FROM src_table
+WHERE id = 2;
+MERGE INTO append_test
+USING (SELECT * FROM @src) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 2;
+MERGE INTO append_test
+USING (SELECT * FROM @src2) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 3;`
+		variables, query := query.SeparateVariablesAndQuery(q1)
+		assert.Equal(t, `@src := SELECT id
+FROM src_table
+WHERE id = 1;
+@src2 := SELECT id
+FROM src_table
+WHERE id = 2;`, variables)
+		assert.Equal(t, `MERGE INTO append_test
+USING (SELECT * FROM @src) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 2;
+MERGE INTO append_test
+USING (SELECT * FROM @src2) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 3`, query)
 	})
 }

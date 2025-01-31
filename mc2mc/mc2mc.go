@@ -153,35 +153,47 @@ func mc2mc(envs []string) error {
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		queriesToExecute = append(queriesToExecute, queryToExecute)
+		queriesToExecute = append(queriesToExecute, strings.Split(queryToExecute, query.BREAK_MARKER)...)
 	default:
 		return errors.Errorf("not supported load method: %s", cfg.LoadMethod)
 	}
 
-	// execute query concurrently
-	wg := sync.WaitGroup{}
-	wg.Add(len(queriesToExecute))
-	errChan := make(chan error, len(queriesToExecute))
+	// only support concurrent execution for REPLACE method
+	enableConcurrentExecution := cfg.LoadMethod == "REPLACE"
+	if enableConcurrentExecution {
+		// execute query concurrently
+		wg := sync.WaitGroup{}
+		wg.Add(len(queriesToExecute))
+		errChan := make(chan error, len(queriesToExecute))
 
-	for _, queryToExecute := range queriesToExecute {
-		go func(queryToExecute string, errChan chan error) {
-			err := c.Execute(ctx, queryToExecute)
+		for _, queryToExecute := range queriesToExecute {
+			go func(queryToExecute string, errChan chan error) {
+				err := c.Execute(ctx, queryToExecute)
+				if err != nil {
+					errChan <- errors.WithStack(err)
+				}
+				wg.Done()
+			}(queryToExecute, errChan)
+		}
+
+		wg.Wait()
+		close(errChan)
+
+		// check error
+		var errs error
+		for err := range errChan {
 			if err != nil {
-				errChan <- errors.WithStack(err)
+				errs = e.Join(errs, err)
 			}
-			wg.Done()
-		}(queryToExecute, errChan)
+		}
+		return errs
 	}
 
-	wg.Wait()
-	close(errChan)
-
-	// check error
-	var errs error
-	for err := range errChan {
-		if err != nil {
-			errs = e.Join(errs, err)
+	// execute query sequentially
+	for _, queryToExecute := range queriesToExecute {
+		if err := c.Execute(ctx, queryToExecute); err != nil {
+			return errors.WithStack(err)
 		}
 	}
-	return errs
+	return nil
 }
