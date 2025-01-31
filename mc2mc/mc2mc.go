@@ -159,39 +159,46 @@ func mc2mc(envs []string) error {
 	}
 
 	// only support concurrent execution for REPLACE method
-	enableConcurrentExecution := cfg.LoadMethod == "REPLACE"
-	if enableConcurrentExecution {
-		// execute query concurrently
-		wg := sync.WaitGroup{}
-		wg.Add(len(queriesToExecute))
-		errChan := make(chan error, len(queriesToExecute))
+	if cfg.LoadMethod == "REPLACE" {
+		return executeConcurrently(ctx, c, queriesToExecute)
+	}
+	// otherwise execute sequentially
+	return execute(ctx, c, queriesToExecute)
+}
 
-		for _, queryToExecute := range queriesToExecute {
-			go func(queryToExecute string, errChan chan error) {
-				err := c.Execute(ctx, queryToExecute)
-				if err != nil {
-					errChan <- errors.WithStack(err)
-				}
-				wg.Done()
-			}(queryToExecute, errChan)
-		}
+func executeConcurrently(ctx context.Context, c *client.Client, queriesToExecute []string) error {
+	// execute query concurrently
+	wg := sync.WaitGroup{}
+	wg.Add(len(queriesToExecute))
+	errChan := make(chan error, len(queriesToExecute))
 
-		wg.Wait()
-		close(errChan)
-
-		// check error
-		var errs error
-		for err := range errChan {
+	for _, queryToExecute := range queriesToExecute {
+		go func(queryToExecute string, errChan chan error) {
+			err := c.Execute(ctx, queryToExecute)
 			if err != nil {
-				errs = e.Join(errs, err)
+				errChan <- errors.WithStack(err)
 			}
-		}
-		return errs
+			wg.Done()
+		}(queryToExecute, errChan)
 	}
 
-	// execute query sequentially
+	wg.Wait()
+	close(errChan)
+
+	// check error
+	var errs error
+	for err := range errChan {
+		if err != nil {
+			errs = e.Join(errs, err)
+		}
+	}
+	return errs
+}
+
+func execute(ctx context.Context, c *client.Client, queriesToExecute []string) error {
 	for _, queryToExecute := range queriesToExecute {
-		if err := c.Execute(ctx, queryToExecute); err != nil {
+		err := c.Execute(ctx, queryToExecute)
+		if err != nil {
 			return errors.WithStack(err)
 		}
 	}
