@@ -181,20 +181,20 @@ func (b *Builder) constructOverridedValues(query string) (string, error) {
 
 // constructMergeQueries constructs merge queries with headers and variables
 func (b *Builder) constructMergeQuery(hr, vars string, queries []string) string {
-	query := ""
+	builder := strings.Builder{}
 	for i, q := range queries {
 		q = strings.TrimSpace(q)
 		if q == "" {
 			continue
 		}
-		query += fmt.Sprintf("%s\n", hr)
+		builder.WriteString(fmt.Sprintf("%s\n", hr))
 		if !IsDDL(q) {
-			query += fmt.Sprintf("%s\n", vars)
+			builder.WriteString(fmt.Sprintf("%s\n", vars))
 		}
-		query += fmt.Sprintf("%s;", q)
+		builder.WriteString(fmt.Sprintf("%s;", q))
 		if i < len(queries)-1 {
-			query += fmt.Sprintf("\n%s\n", BREAK_MARKER)
+			builder.WriteString(fmt.Sprintf("\n%s\n", BREAK_MARKER))
 		}
 	}
-	return query
+	return builder.String()
 }
