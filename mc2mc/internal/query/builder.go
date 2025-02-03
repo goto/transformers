@@ -62,7 +62,15 @@ func (b *Builder) Build() (string, error) {
 
 	// merge method is a script, no need to construct query
 	if b.method == MERGE {
-		return b.query, nil
+		query := RemoveComments(b.query)
+		hr, query := SeparateHeadersAndQuery(query)
+		vars, query := SeparateVariablesAndQuery(query)
+		queries := semicolonPattern.Split(query, -1)
+		if len(queries) <= 1 {
+			return b.query, nil
+		}
+		query = b.constructMergeQuery(hr, vars, queries)
+		return query, nil
 	}
 
 	// destination table is required for append and replace method
@@ -169,4 +177,24 @@ func (b *Builder) constructOverridedValues(query string) (string, error) {
 		}
 	}
 	return fmt.Sprintf("SELECT %s FROM (\n%s\n)", strings.Join(columns, ", "), query), nil
+}
+
+// constructMergeQueries constructs merge queries with headers and variables
+func (b *Builder) constructMergeQuery(hr, vars string, queries []string) string {
+	builder := strings.Builder{}
+	for i, q := range queries {
+		q = strings.TrimSpace(q)
+		if q == "" {
+			continue
+		}
+		builder.WriteString(fmt.Sprintf("%s\n", hr))
+		if !IsDDL(q) {
+			builder.WriteString(fmt.Sprintf("%s\n", vars))
+		}
+		builder.WriteString(fmt.Sprintf("%s;", q))
+		if i < len(queries)-1 {
+			builder.WriteString(fmt.Sprintf("\n%s\n", BREAK_MARKER))
+		}
+	}
+	return builder.String()
 }

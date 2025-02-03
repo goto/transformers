@@ -153,11 +153,20 @@ func mc2mc(envs []string) error {
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		queriesToExecute = append(queriesToExecute, queryToExecute)
+		queriesToExecute = append(queriesToExecute, strings.Split(queryToExecute, query.BREAK_MARKER)...)
 	default:
 		return errors.Errorf("not supported load method: %s", cfg.LoadMethod)
 	}
 
+	// only support concurrent execution for REPLACE method
+	if cfg.LoadMethod == "REPLACE" {
+		return executeConcurrently(ctx, c, queriesToExecute)
+	}
+	// otherwise execute sequentially
+	return execute(ctx, c, queriesToExecute)
+}
+
+func executeConcurrently(ctx context.Context, c *client.Client, queriesToExecute []string) error {
 	// execute query concurrently
 	wg := sync.WaitGroup{}
 	wg.Add(len(queriesToExecute))
@@ -184,4 +193,14 @@ func mc2mc(envs []string) error {
 		}
 	}
 	return errs
+}
+
+func execute(ctx context.Context, c *client.Client, queriesToExecute []string) error {
+	for _, queryToExecute := range queriesToExecute {
+		err := c.Execute(ctx, queryToExecute)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+	}
+	return nil
 }
