@@ -10,11 +10,12 @@ const (
 )
 
 var (
-	semicolonPattern = regexp.MustCompile(`;(\n+|$)`)        // regex to match semicolons
-	commentRegex     = regexp.MustCompile(`(?m)^\s*--.*\n?`) // regex to match comments
-	headerPattern    = regexp.MustCompile(`(?i)^set`)        // regex to match header statements
-	variablePattern  = regexp.MustCompile(`(?i)^@`)          // regex to match variable statements
-	ddlPattern       = regexp.MustCompile(`(?i)^CREATE\s+`)  // regex to match DDL statements
+	semicolonPattern    = regexp.MustCompile(`;(\n+|$)`)               // regex to match semicolons
+	commentPattern      = regexp.MustCompile(`(?m)\s*--.*\n?`)         // regex to match comments
+	multiCommentPattern = regexp.MustCompile(`(?s)\s*/\*.*?\*/\s*\n?`) // regex to match multi-line comments
+	headerPattern       = regexp.MustCompile(`(?i)^set`)               // regex to match header statements
+	variablePattern     = regexp.MustCompile(`(?i)^@`)                 // regex to match variable statements
+	ddlPattern          = regexp.MustCompile(`(?i)^CREATE\s+`)         // regex to match DDL statements
 )
 
 func SeparateHeadersAndQuery(query string) (string, string) {
@@ -29,7 +30,7 @@ func SeparateHeadersAndQuery(query string) (string, string) {
 		if stmt == "" {
 			continue
 		}
-		stmtWithoutComment := commentRegex.ReplaceAllString(stmt, "")
+		stmtWithoutComment := commentPattern.ReplaceAllString(stmt, "")
 		if headerPattern.MatchString(stmtWithoutComment) {
 			headers = append(headers, stmt)
 		} else {
@@ -64,7 +65,7 @@ func SeparateVariablesAndQuery(query string) (string, string) {
 		if stmt == "" {
 			continue
 		}
-		stmtWithoutComment := commentRegex.ReplaceAllString(stmt, "")
+		stmtWithoutComment := commentPattern.ReplaceAllString(stmt, "")
 		if variablePattern.MatchString(stmtWithoutComment) {
 			variables = append(variables, stmt)
 		} else {
@@ -85,6 +86,12 @@ func SeparateVariablesAndQuery(query string) (string, string) {
 	queryStr := strings.Join(remainingQueries, ";\n")
 
 	return variableStr, queryStr
+}
+
+func RemoveComments(query string) string {
+	query = commentPattern.ReplaceAllString(query, "")
+	query = multiCommentPattern.ReplaceAllString(query, "")
+	return strings.TrimSpace(query)
 }
 
 func IsDDL(query string) bool {

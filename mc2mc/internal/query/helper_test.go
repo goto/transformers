@@ -189,3 +189,24 @@ WHEN MATCHED THEN UPDATE
 SET append_test.id = 3`, query)
 	})
 }
+
+func TestRemoveComments(t *testing.T) {
+	t.Run("returns query without single comments", func(t *testing.T) {
+		q1 := `-- comment here
+SELECT * FROM project.dataset.table; -- comment there`
+		query := query.RemoveComments(q1)
+		assert.Equal(t, `SELECT * FROM project.dataset.table;`, query)
+
+	})
+	t.Run("returns query without multiline comments", func(t *testing.T) {
+		q1 := `/* comment here
+    another
+*/  
+SELECT * FROM project.dataset.table; -- comment there
+
+
+`
+		query := query.RemoveComments(q1)
+		assert.Equal(t, `SELECT * FROM project.dataset.table;`, query)
+	})
+}

@@ -62,7 +62,8 @@ func (b *Builder) Build() (string, error) {
 
 	// merge method is a script, no need to construct query
 	if b.method == MERGE {
-		hr, query := SeparateHeadersAndQuery(b.query)
+		query := RemoveComments(b.query)
+		hr, query := SeparateHeadersAndQuery(query)
 		vars, query := SeparateVariablesAndQuery(query)
 		queries := semicolonPattern.Split(query, -1)
 		if len(queries) <= 1 {
