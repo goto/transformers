@@ -15,6 +15,7 @@ var (
 	multiCommentPattern = regexp.MustCompile(`(?s)\s*/\*.*?\*/\s*\n?`) // regex to match multi-line comments
 	headerPattern       = regexp.MustCompile(`(?i)^set`)               // regex to match header statements
 	variablePattern     = regexp.MustCompile(`(?i)^@`)                 // regex to match variable statements
+	udfPattern          = regexp.MustCompile(`(?i)^function\s+`)       // regex to match UDF statements
 	ddlPattern          = regexp.MustCompile(`(?i)^CREATE\s+`)         // regex to match DDL statements
 )
 
@@ -53,8 +54,8 @@ func SeparateHeadersAndQuery(query string) (string, string) {
 	return headerStr, queryStr
 }
 
-func SeparateVariablesAndQuery(query string) (string, string) {
-	variables := []string{}
+func SeparateVariablesUDFsAndQuery(query string) (string, string) {
+	variablesAndUDFs := []string{}
 	query = strings.TrimSpace(query)
 	remainingQueries := []string{}
 
@@ -66,26 +67,26 @@ func SeparateVariablesAndQuery(query string) (string, string) {
 			continue
 		}
 		stmtWithoutComment := commentPattern.ReplaceAllString(stmt, "")
-		if variablePattern.MatchString(stmtWithoutComment) {
-			variables = append(variables, stmt)
+		if variablePattern.MatchString(stmtWithoutComment) || udfPattern.MatchString(stmtWithoutComment) {
+			variablesAndUDFs = append(variablesAndUDFs, stmt)
 		} else {
 			remainingQueries = append(remainingQueries, stmt)
 		}
 	}
 
-	variableStr := ""
-	if len(variables) > 0 {
-		for i, variable := range variables {
-			variables[i] = strings.TrimSpace(variable)
+	variableUDFStr := ""
+	if len(variablesAndUDFs) > 0 {
+		for i, variable := range variablesAndUDFs {
+			variablesAndUDFs[i] = strings.TrimSpace(variable)
 		}
-		variableStr = strings.Join(variables, ";\n")
-		variableStr += ";"
+		variableUDFStr = strings.Join(variablesAndUDFs, ";\n")
+		variableUDFStr += ";"
 	}
 
 	// join the remaining queries back together
 	queryStr := strings.Join(remainingQueries, ";\n")
 
-	return variableStr, queryStr
+	return variableUDFStr, queryStr
 }
 
 func RemoveComments(query string) string {
