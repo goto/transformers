@@ -107,14 +107,14 @@ where CAST(event_timestamp as DATE) = '{{ .DSTART | Date }}'
 	})
 }
 
-func TestSeparateVariablesAndQuery(t *testing.T) {
+func TestSeparateVariablesUDFsAndQuery(t *testing.T) {
 	t.Run("returns query without variables", func(t *testing.T) {
 		q1 := `MERGE INTO append_test
 USING (SELECT * FROM @src) source
 on append_test.id = source.id
 WHEN MATCHED THEN UPDATE
 SET append_test.id = 2;`
-		variables, query := query.SeparateVariablesAndQuery(q1)
+		variables, query := query.SeparateVariablesUDFsAndQuery(q1)
 		assert.Empty(t, variables)
 		assert.Equal(t, `MERGE INTO append_test
 USING (SELECT * FROM @src) source
@@ -130,7 +130,7 @@ on append_test.id = source.id
 WHEN MATCHED THEN UPDATE
 SET append_test.id = 2;`
 
-		variables, query := query.SeparateVariablesAndQuery(q1)
+		variables, query := query.SeparateVariablesUDFsAndQuery(q1)
 		assert.Empty(t, variables)
 		assert.Equal(t, `MERGE INTO append_test
 USING (SELECT * FROM @src) source
@@ -145,7 +145,7 @@ USING (SELECT * FROM @src) source
 on append_test.id = source.id
 WHEN MATCHED THEN UPDATE
 SET append_test.id = 2;`
-		variables, query := query.SeparateVariablesAndQuery(q1)
+		variables, query := query.SeparateVariablesUDFsAndQuery(q1)
 		assert.Equal(t, "@src := SELECT 1 id;", variables)
 		assert.Equal(t, `MERGE INTO append_test
 USING (SELECT * FROM @src) source
@@ -170,10 +170,47 @@ USING (SELECT * FROM @src2) source
 on append_test.id = source.id
 WHEN MATCHED THEN UPDATE
 SET append_test.id = 3;`
-		variables, query := query.SeparateVariablesAndQuery(q1)
+		variables, query := query.SeparateVariablesUDFsAndQuery(q1)
 		assert.Equal(t, `@src := SELECT id
 FROM src_table
 WHERE id = 1;
+@src2 := SELECT id
+FROM src_table
+WHERE id = 2;`, variables)
+		assert.Equal(t, `MERGE INTO append_test
+USING (SELECT * FROM @src) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 2;
+MERGE INTO append_test
+USING (SELECT * FROM @src2) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 3`, query)
+	})
+	t.Run("splits multiline variables + udfs and queries", func(t *testing.T) {
+		q1 := `@src := SELECT id
+FROM src_table
+WHERE id = 1;
+function my_add(@a BIGINT) as @a + 1;
+@src2 := SELECT id
+FROM src_table
+WHERE id = 2;
+MERGE INTO append_test
+USING (SELECT * FROM @src) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 2;
+MERGE INTO append_test
+USING (SELECT * FROM @src2) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 3;`
+		variables, query := query.SeparateVariablesUDFsAndQuery(q1)
+		assert.Equal(t, `@src := SELECT id
+FROM src_table
+WHERE id = 1;
+function my_add(@a BIGINT) as @a + 1;
 @src2 := SELECT id
 FROM src_table
 WHERE id = 2;`, variables)

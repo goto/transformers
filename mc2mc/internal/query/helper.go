@@ -54,8 +54,8 @@ func SeparateHeadersAndQuery(query string) (string, string) {
 	return headerStr, queryStr
 }
 
-func SeparateVariablesAndQuery(query string) (string, string) {
-	variables := []string{}
+func SeparateVariablesUDFsAndQuery(query string) (string, string) {
+	variablesAndUDFs := []string{}
 	query = strings.TrimSpace(query)
 	remainingQueries := []string{}
 
@@ -67,61 +67,26 @@ func SeparateVariablesAndQuery(query string) (string, string) {
 			continue
 		}
 		stmtWithoutComment := commentPattern.ReplaceAllString(stmt, "")
-		if variablePattern.MatchString(stmtWithoutComment) {
-			variables = append(variables, stmt)
+		if variablePattern.MatchString(stmtWithoutComment) || udfPattern.MatchString(stmtWithoutComment) {
+			variablesAndUDFs = append(variablesAndUDFs, stmt)
 		} else {
 			remainingQueries = append(remainingQueries, stmt)
 		}
 	}
 
-	variableStr := ""
-	if len(variables) > 0 {
-		for i, variable := range variables {
-			variables[i] = strings.TrimSpace(variable)
+	variableUDFStr := ""
+	if len(variablesAndUDFs) > 0 {
+		for i, variable := range variablesAndUDFs {
+			variablesAndUDFs[i] = strings.TrimSpace(variable)
 		}
-		variableStr = strings.Join(variables, ";\n")
-		variableStr += ";"
+		variableUDFStr = strings.Join(variablesAndUDFs, ";\n")
+		variableUDFStr += ";"
 	}
 
 	// join the remaining queries back together
 	queryStr := strings.Join(remainingQueries, ";\n")
 
-	return variableStr, queryStr
-}
-
-func SeparateUDFsAndQuery(query string) (string, string) {
-	udfs := []string{}
-	query = strings.TrimSpace(query)
-	remainingQueries := []string{}
-
-	// extract all UDF lines (function statements)
-	stmts := semicolonPattern.Split(query, -1)
-	for _, stmt := range stmts {
-		stmt = strings.TrimSpace(stmt)
-		if stmt == "" {
-			continue
-		}
-		stmtWithoutComment := commentPattern.ReplaceAllString(stmt, "")
-		if udfPattern.MatchString(stmtWithoutComment) {
-			udfs = append(udfs, stmt)
-		} else {
-			remainingQueries = append(remainingQueries, stmt)
-		}
-	}
-
-	udfStr := ""
-	if len(udfs) > 0 {
-		for i, udf := range udfs {
-			udfs[i] = strings.TrimSpace(udf)
-		}
-		udfStr = strings.Join(udfs, ";\n")
-		udfStr += ";"
-	}
-
-	// join the remaining queries back together
-	queryStr := strings.Join(remainingQueries, ";\n")
-
-	return udfStr, queryStr
+	return variableUDFStr, queryStr
 }
 
 func RemoveComments(query string) string {
