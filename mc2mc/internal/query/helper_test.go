@@ -232,18 +232,28 @@ func TestRemoveComments(t *testing.T) {
 		q1 := `-- comment here
 SELECT * FROM project.dataset.table; -- comment there`
 		query := query.RemoveComments(q1)
-		assert.Equal(t, `SELECT * FROM project.dataset.table;`, query)
+		assert.Equal(t, `
+SELECT * FROM project.dataset.table; `, query)
 
 	})
 	t.Run("returns query without multiline comments", func(t *testing.T) {
 		q1 := `/* comment here
     another
-*/  
+*/
 SELECT * FROM project.dataset.table; -- comment there
-
 
 `
 		query := query.RemoveComments(q1)
-		assert.Equal(t, `SELECT * FROM project.dataset.table;`, query)
+		assert.Equal(t, `
+SELECT * FROM project.dataset.table; 
+
+`, query)
+	})
+	t.Run("returns query without comment and no changing query structure", func(t *testing.T) {
+		q1 := `SELECT * -- comment here
+FROM project.dataset.table;`
+		query := query.RemoveComments(q1)
+		assert.Equal(t, `SELECT * 
+FROM project.dataset.table;`, query)
 	})
 }
