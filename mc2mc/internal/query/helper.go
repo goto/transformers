@@ -15,6 +15,7 @@ var (
 	multiCommentPattern = regexp.MustCompile(`(?s)\s*/\*.*?\*/\s*\n?`) // regex to match multi-line comments
 	headerPattern       = regexp.MustCompile(`(?i)^set`)               // regex to match header statements
 	variablePattern     = regexp.MustCompile(`(?i)^@`)                 // regex to match variable statements
+	udfPattern          = regexp.MustCompile(`(?i)^function\s+`)       // regex to match UDF statements
 	ddlPattern          = regexp.MustCompile(`(?i)^CREATE\s+`)         // regex to match DDL statements
 )
 
@@ -86,6 +87,41 @@ func SeparateVariablesAndQuery(query string) (string, string) {
 	queryStr := strings.Join(remainingQueries, ";\n")
 
 	return variableStr, queryStr
+}
+
+func SeparateUDFsAndQuery(query string) (string, string) {
+	udfs := []string{}
+	query = strings.TrimSpace(query)
+	remainingQueries := []string{}
+
+	// extract all UDF lines (function statements)
+	stmts := semicolonPattern.Split(query, -1)
+	for _, stmt := range stmts {
+		stmt = strings.TrimSpace(stmt)
+		if stmt == "" {
+			continue
+		}
+		stmtWithoutComment := commentPattern.ReplaceAllString(stmt, "")
+		if udfPattern.MatchString(stmtWithoutComment) {
+			udfs = append(udfs, stmt)
+		} else {
+			remainingQueries = append(remainingQueries, stmt)
+		}
+	}
+
+	udfStr := ""
+	if len(udfs) > 0 {
+		for i, udf := range udfs {
+			udfs[i] = strings.TrimSpace(udf)
+		}
+		udfStr = strings.Join(udfs, ";\n")
+		udfStr += ";"
+	}
+
+	// join the remaining queries back together
+	queryStr := strings.Join(remainingQueries, ";\n")
+
+	return udfStr, queryStr
 }
 
 func RemoveComments(query string) string {

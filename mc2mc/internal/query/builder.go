@@ -65,11 +65,12 @@ func (b *Builder) Build() (string, error) {
 		query := RemoveComments(b.query)
 		hr, query := SeparateHeadersAndQuery(query)
 		vars, query := SeparateVariablesAndQuery(query)
+		udfs, query := SeparateUDFsAndQuery(query)
 		queries := semicolonPattern.Split(query, -1)
 		if len(queries) <= 1 {
 			return b.query, nil
 		}
-		query = b.constructMergeQuery(hr, vars, queries)
+		query = b.constructMergeQuery(hr, vars, udfs, queries)
 		return query, nil
 	}
 
@@ -180,7 +181,7 @@ func (b *Builder) constructOverridedValues(query string) (string, error) {
 }
 
 // constructMergeQueries constructs merge queries with headers and variables
-func (b *Builder) constructMergeQuery(hr, vars string, queries []string) string {
+func (b *Builder) constructMergeQuery(hr, vars, udfs string, queries []string) string {
 	builder := strings.Builder{}
 	for i, q := range queries {
 		q = strings.TrimSpace(q)
@@ -189,7 +190,12 @@ func (b *Builder) constructMergeQuery(hr, vars string, queries []string) string 
 		}
 		builder.WriteString(fmt.Sprintf("%s\n", hr))
 		if !IsDDL(q) {
-			builder.WriteString(fmt.Sprintf("%s\n", vars))
+			if udfs != "" {
+				builder.WriteString(fmt.Sprintf("%s\n", udfs))
+			}
+			if vars != "" {
+				builder.WriteString(fmt.Sprintf("%s\n", vars))
+			}
 		}
 		builder.WriteString(fmt.Sprintf("%s;", q))
 		if i < len(queries)-1 {
