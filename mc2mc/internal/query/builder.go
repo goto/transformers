@@ -79,7 +79,8 @@ func (b *Builder) Build() (string, error) {
 	}
 
 	var err error
-	hr, query := SeparateHeadersAndQuery(b.query)
+	query := RemoveComments(b.query)
+	hr, query := SeparateHeadersAndQuery(query)
 
 	// construct overrided values if enabled
 	if b.overridedValues != nil {

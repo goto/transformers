@@ -358,7 +358,41 @@ select * from project.playground.table
 SELECT col1, col2, _partitiontime FROM (
 SELECT col1, col2, TIMESTAMP('2021-01-01') as _partitiontime FROM (
 select * from project.playground.table
--- this is comment
+)
+)
+;`, queryToExecute)
+	})
+	t.Run("returns query for replace load method with comment in the end with semicolon", func(t *testing.T) {
+		queryToExecute := `select * from project.playground.table;
+		-- this is comment;`
+		odspClient := &mockOdpsClient{
+			orderedColumns: func() ([]string, error) {
+				return []string{"col1", "col2", "_partitiontime"}, nil
+			},
+			partitionResult: func() ([]string, error) {
+				return []string{"col3"}, nil
+			},
+		}
+		destinationTableID := "project.playground.table_destination"
+
+		queryToExecute, err := query.NewBuilder(
+			logger.NewDefaultLogger(),
+			odspClient,
+			query.WithQuery(queryToExecute),
+			query.WithMethod(query.REPLACE),
+			query.WithDestination(destinationTableID),
+			query.WithOverridedValue("_partitiontime", "TIMESTAMP('2021-01-01')"),
+			query.WithOverridedValue("_partitiondate", "DATE(TIMESTAMP('2021-01-01'))"),
+			query.WithAutoPartition(true),
+			query.WithPartitionValue(true),
+			query.WithColumnOrder(),
+		).Build()
+
+		assert.NoError(t, err)
+		assert.Equal(t, `INSERT OVERWRITE TABLE project.playground.table_destination 
+SELECT col1, col2, _partitiontime FROM (
+SELECT col1, col2, TIMESTAMP('2021-01-01') as _partitiontime FROM (
+select * from project.playground.table
 )
 )
 ;`, queryToExecute)
