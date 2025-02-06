@@ -10,13 +10,13 @@ const (
 )
 
 var (
-	semicolonPattern    = regexp.MustCompile(`;(\n+|$)`)               // regex to match semicolons
-	commentPattern      = regexp.MustCompile(`(?m)\s*--.*\n?`)         // regex to match comments
-	multiCommentPattern = regexp.MustCompile(`(?s)\s*/\*.*?\*/\s*\n?`) // regex to match multi-line comments
-	headerPattern       = regexp.MustCompile(`(?i)^set`)               // regex to match header statements
-	variablePattern     = regexp.MustCompile(`(?i)^@`)                 // regex to match variable statements
-	udfPattern          = regexp.MustCompile(`(?i)^function\s+`)       // regex to match UDF statements
-	ddlPattern          = regexp.MustCompile(`(?i)^CREATE\s+`)         // regex to match DDL statements
+	semicolonPattern    = regexp.MustCompile(`;(\n+|$)`)         // regex to match semicolons
+	commentPattern      = regexp.MustCompile(`--[^\n]*`)         // regex to match comments
+	multiCommentPattern = regexp.MustCompile(`(?s)/\*.*?\*/`)    // regex to match multi-line comments
+	headerPattern       = regexp.MustCompile(`(?i)^set`)         // regex to match header statements
+	variablePattern     = regexp.MustCompile(`(?i)^@`)           // regex to match variable statements
+	udfPattern          = regexp.MustCompile(`(?i)^function\s+`) // regex to match UDF statements
+	ddlPattern          = regexp.MustCompile(`(?i)^CREATE\s+`)   // regex to match DDL statements
 )
 
 func SeparateHeadersAndQuery(query string) (string, string) {
@@ -32,7 +32,7 @@ func SeparateHeadersAndQuery(query string) (string, string) {
 			continue
 		}
 		stmtWithoutComment := commentPattern.ReplaceAllString(stmt, "")
-		if headerPattern.MatchString(stmtWithoutComment) {
+		if headerPattern.MatchString(strings.TrimSpace(stmtWithoutComment)) {
 			headers = append(headers, stmt)
 		} else {
 			remainingQueries = append(remainingQueries, stmt)
@@ -67,7 +67,8 @@ func SeparateVariablesUDFsAndQuery(query string) (string, string) {
 			continue
 		}
 		stmtWithoutComment := commentPattern.ReplaceAllString(stmt, "")
-		if variablePattern.MatchString(stmtWithoutComment) || udfPattern.MatchString(stmtWithoutComment) {
+		if variablePattern.MatchString(strings.TrimSpace(stmtWithoutComment)) ||
+			udfPattern.MatchString(strings.TrimSpace(stmtWithoutComment)) {
 			variablesAndUDFs = append(variablesAndUDFs, stmt)
 		} else {
 			remainingQueries = append(remainingQueries, stmt)
@@ -92,7 +93,7 @@ func SeparateVariablesUDFsAndQuery(query string) (string, string) {
 func RemoveComments(query string) string {
 	query = commentPattern.ReplaceAllString(query, "")
 	query = multiCommentPattern.ReplaceAllString(query, "")
-	return strings.TrimSpace(query)
+	return query
 }
 
 func IsDDL(query string) bool {
