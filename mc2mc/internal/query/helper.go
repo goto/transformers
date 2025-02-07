@@ -11,7 +11,7 @@ const (
 )
 
 var (
-	semicolonPattern    = regexp.MustCompile(`;(\n+|$)`)         // regex to match semicolons
+	semicolonPattern    = regexp.MustCompile(`;\s*(\n+|$)`)      // regex to match semicolons
 	commentPattern      = regexp.MustCompile(`--[^\n]*`)         // regex to match comments
 	multiCommentPattern = regexp.MustCompile(`(?s)/\*.*?\*/`)    // regex to match multi-line comments
 	headerPattern       = regexp.MustCompile(`(?i)^set`)         // regex to match header statements

@@ -295,6 +295,7 @@ select * from project.playground.table
 	})
 	t.Run("returns query for append load method when contains hrs, vars and udfs", func(t *testing.T) {
 		queryToExecute := `set odps.table.append2.enable=true;
+set odps.table.append3.enable=true; 	
 -- this is comment
 function my_add(@a BIGINT) as @a + 1;
 /* maybe
@@ -326,6 +327,7 @@ select * from project.playground.table;`
 
 		assert.NoError(t, err)
 		assert.Equal(t, `set odps.table.append2.enable=true;
+set odps.table.append3.enable=true;
 function my_add(@a BIGINT) as @a + 1;
 @src := SELECT my_add(1) id;
 INSERT INTO TABLE project.playground.table_destination 
