@@ -19,6 +19,7 @@ type ConfigEnv struct {
 	DStart                      string `env:"DSTART"`
 	DEnd                        string `env:"DEND"`
 	ExecutionProject            string `env:"EXECUTION_PROJECT"`
+	Concurrency                 int    `env:"CONCURRENCY" envDefault:"7"`
 	LogViewRetentionInDays      int    `env:"LOG_VIEW_RETENTION_IN_DAYS" envDefault:"2"`
 	DisableMultiQueryGeneration bool   `env:"DISABLE_MULTI_QUERY_GENERATION" envDefault:"false"`
 	// TODO: delete this
