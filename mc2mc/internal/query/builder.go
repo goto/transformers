@@ -81,6 +81,7 @@ func (b *Builder) Build() (string, error) {
 	var err error
 	query := RemoveComments(b.query)
 	hr, query := SeparateHeadersAndQuery(query)
+	varsAndUDFs, query := SeparateVariablesUDFsAndQuery(query)
 
 	// construct overrided values if enabled
 	if b.overridedValues != nil {
@@ -137,7 +138,7 @@ func (b *Builder) Build() (string, error) {
 	if hr == "" {
 		return query, nil
 	}
-	return fmt.Sprintf("%s\n%s", hr, query), nil
+	return fmt.Sprintf("%s\n%s\n%s", hr, varsAndUDFs, query), nil
 }
 
 // separateHeadersAndQuery separates headers and query from the given query

@@ -293,6 +293,49 @@ select * from project.playground.table
 )
 ;`, queryToExecute)
 	})
+	t.Run("returns query for append load method when contains hrs, vars and udfs", func(t *testing.T) {
+		queryToExecute := `set odps.table.append2.enable=true;
+-- this is comment
+function my_add(@a BIGINT) as @a + 1;
+/* maybe
+another comment */
+@src := SELECT my_add(1) id;
+select * from project.playground.table;`
+		odspClient := &mockOdpsClient{
+			orderedColumns: func() ([]string, error) {
+				return []string{"col1", "col2", "_partitiontime"}, nil
+			},
+			partitionResult: func() ([]string, error) {
+				return []string{"col3"}, nil
+			},
+		}
+		destinationTableID := "project.playground.table_destination"
+
+		queryToExecute, err := query.NewBuilder(
+			logger.NewDefaultLogger(),
+			odspClient,
+			query.WithQuery(queryToExecute),
+			query.WithMethod(query.APPEND),
+			query.WithDestination(destinationTableID),
+			query.WithOverridedValue("_partitiontime", "TIMESTAMP('2021-01-01')"),
+			query.WithOverridedValue("_partitiondate", "DATE(TIMESTAMP('2021-01-01'))"),
+			query.WithAutoPartition(true),
+			query.WithPartitionValue(true),
+			query.WithColumnOrder(),
+		).Build()
+
+		assert.NoError(t, err)
+		assert.Equal(t, `set odps.table.append2.enable=true;
+function my_add(@a BIGINT) as @a + 1;
+@src := SELECT my_add(1) id;
+INSERT INTO TABLE project.playground.table_destination 
+SELECT col1, col2, _partitiontime FROM (
+SELECT col1, col2, TIMESTAMP('2021-01-01') as _partitiontime FROM (
+select * from project.playground.table
+)
+)
+;`, queryToExecute)
+	})
 	t.Run("returns query for replace load method", func(t *testing.T) {
 		queryToExecute := `select * from project.playground.table;`
 		odspClient := &mockOdpsClient{
