@@ -160,25 +160,28 @@ func mc2mc(envs []string) error {
 
 	// only support concurrent execution for REPLACE method
 	if cfg.LoadMethod == "REPLACE" {
-		return executeConcurrently(ctx, c, queriesToExecute)
+		return executeConcurrently(ctx, c, cfg.Concurrency, queriesToExecute)
 	}
 	// otherwise execute sequentially
 	return execute(ctx, c, queriesToExecute)
 }
 
-func executeConcurrently(ctx context.Context, c *client.Client, queriesToExecute []string) error {
+func executeConcurrently(ctx context.Context, c *client.Client, concurrency int, queriesToExecute []string) error {
 	// execute query concurrently
+	sem := make(chan uint8, concurrency)
 	wg := sync.WaitGroup{}
 	wg.Add(len(queriesToExecute))
 	errChan := make(chan error, len(queriesToExecute))
 
 	for _, queryToExecute := range queriesToExecute {
+		sem <- 0
 		go func(queryToExecute string, errChan chan error) {
 			err := c.Execute(ctx, queryToExecute)
 			if err != nil {
 				errChan <- errors.WithStack(err)
 			}
 			wg.Done()
+			<-sem
 		}(queryToExecute, errChan)
 	}
 
