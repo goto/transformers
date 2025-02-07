@@ -1,6 +1,7 @@
 package query
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 )
@@ -17,6 +18,7 @@ var (
 	variablePattern     = regexp.MustCompile(`(?i)^@`)           // regex to match variable statements
 	udfPattern          = regexp.MustCompile(`(?i)^function\s+`) // regex to match UDF statements
 	ddlPattern          = regexp.MustCompile(`(?i)^CREATE\s+`)   // regex to match DDL statements
+	stringPattern       = regexp.MustCompile(`'[^']*'`)          // regex to match SQL strings (anything inside single quotes)
 )
 
 func SeparateHeadersAndQuery(query string) (string, string) {
@@ -93,6 +95,25 @@ func SeparateVariablesUDFsAndQuery(query string) (string, string) {
 func RemoveComments(query string) string {
 	query = commentPattern.ReplaceAllString(query, "")
 	query = multiCommentPattern.ReplaceAllString(query, "")
+	return query
+}
+
+func ProtectedStringLiteral(query string) (map[string]string, string) {
+	// Replace all strings with a placeholder to protect them
+	placeholders := make(map[string]string)
+	protectedQuery := stringPattern.ReplaceAllStringFunc(query, func(match string) string {
+		placeholder := fmt.Sprintf("__STRING_PLACEHOLDER_%d__", len(placeholders))
+		placeholders[placeholder] = match
+		return placeholder
+	})
+	return placeholders, protectedQuery
+}
+
+func RestoreStringLiteral(query string, placeholders map[string]string) string {
+	// Restore all strings from the placeholders
+	for placeholder, original := range placeholders {
+		query = strings.ReplaceAll(query, placeholder, original)
+	}
 	return query
 }
 

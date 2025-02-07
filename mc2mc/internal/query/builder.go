@@ -60,16 +60,22 @@ func (b *Builder) Build() (string, error) {
 		return "", errors.New("query is required")
 	}
 
+	// protect string inside single quotes
+	placeholders, query := ProtectedStringLiteral(b.query)
+
+	// separate headers, variables and udfs from the query
+	query = RemoveComments(query)
+	hr, query := SeparateHeadersAndQuery(query)
+	varsAndUDFs, query := SeparateVariablesUDFsAndQuery(query)
+
 	// merge method is a script, no need to construct query
 	if b.method == MERGE {
-		query := RemoveComments(b.query)
-		hr, query := SeparateHeadersAndQuery(query)
-		varsAndUDFs, query := SeparateVariablesUDFsAndQuery(query)
 		queries := semicolonPattern.Split(query, -1)
 		if len(queries) <= 1 {
 			return b.query, nil
 		}
 		query = b.constructMergeQuery(hr, varsAndUDFs, queries)
+		query = RestoreStringLiteral(query, placeholders)
 		return query, nil
 	}
 
@@ -79,8 +85,6 @@ func (b *Builder) Build() (string, error) {
 	}
 
 	var err error
-	query := RemoveComments(b.query)
-	hr, query := SeparateHeadersAndQuery(query)
 
 	// construct overrided values if enabled
 	if b.overridedValues != nil {
@@ -133,11 +137,16 @@ func (b *Builder) Build() (string, error) {
 		}
 	}
 
-	// construct final query with headers
-	if hr == "" {
-		return query, nil
+	// construct final query with headers, variables and udfs
+	if hr != "" {
+		hr += "\n"
 	}
-	return fmt.Sprintf("%s\n%s", hr, query), nil
+	if varsAndUDFs != "" {
+		varsAndUDFs += "\n"
+	}
+	query = fmt.Sprintf("%s%s%s", hr, varsAndUDFs, query)
+	query = RestoreStringLiteral(query, placeholders)
+	return query, nil
 }
 
 // separateHeadersAndQuery separates headers and query from the given query

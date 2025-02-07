@@ -257,3 +257,63 @@ FROM project.dataset.table;`
 FROM project.dataset.table;`, query)
 	})
 }
+
+func TestProtectedStringLiteral(t *testing.T) {
+	t.Run("returns query with protected string literals", func(t *testing.T) {
+		q1 := `SELECT * FROM project.dataset.table WHERE name = 'john' AND age = 20;`
+		placeholders, query := query.ProtectedStringLiteral(q1)
+		assert.Equal(t, map[string]string{
+			"__STRING_PLACEHOLDER_0__": "'john'",
+		}, placeholders)
+		assert.Equal(t, `SELECT * FROM project.dataset.table WHERE name = __STRING_PLACEHOLDER_0__ AND age = 20;`, query)
+	})
+	t.Run("returns query with protected string literals with multiple strings", func(t *testing.T) {
+		q1 := `SELECT * FROM project.dataset.table WHERE name = 'john' AND age = 20 AND city = 'new york';`
+		placeholders, query := query.ProtectedStringLiteral(q1)
+		assert.Equal(t, map[string]string{
+			"__STRING_PLACEHOLDER_0__": "'john'",
+			"__STRING_PLACEHOLDER_1__": "'new york'",
+		}, placeholders)
+		assert.Equal(t, `SELECT * FROM project.dataset.table WHERE name = __STRING_PLACEHOLDER_0__ AND age = 20 AND city = __STRING_PLACEHOLDER_1__;`, query)
+	})
+	t.Run("returns query with protected string literals with multiple strings and special characters", func(t *testing.T) {
+		q1 := `SELECT * FROM project.dataset.table WHERE name = 'john' AND age = 20 AND city = 'new york' AND address = '1234 5th --Ave';`
+		placeholders, query := query.ProtectedStringLiteral(q1)
+		assert.Equal(t, map[string]string{
+			"__STRING_PLACEHOLDER_0__": "'john'",
+			"__STRING_PLACEHOLDER_1__": "'new york'",
+			"__STRING_PLACEHOLDER_2__": "'1234 5th --Ave'",
+		}, placeholders)
+		assert.Equal(t, `SELECT * FROM project.dataset.table WHERE name = __STRING_PLACEHOLDER_0__ AND age = 20 AND city = __STRING_PLACEHOLDER_1__ AND address = __STRING_PLACEHOLDER_2__;`, query)
+	})
+}
+
+func TestRestoreStringLiteral(t *testing.T) {
+	t.Run("returns query with restored string literals", func(t *testing.T) {
+		q1 := `SELECT * FROM project.dataset.table WHERE name = __STRING_PLACEHOLDER_0__ AND age = 20;`
+		placeholders := map[string]string{
+			"__STRING_PLACEHOLDER_0__": "'john'",
+		}
+		query := query.RestoreStringLiteral(q1, placeholders)
+		assert.Equal(t, `SELECT * FROM project.dataset.table WHERE name = 'john' AND age = 20;`, query)
+	})
+	t.Run("returns query with restored string literals with multiple strings", func(t *testing.T) {
+		q1 := `SELECT * FROM project.dataset.table WHERE name = __STRING_PLACEHOLDER_0__ AND age = 20 AND city = __STRING_PLACEHOLDER_1__;`
+		placeholders := map[string]string{
+			"__STRING_PLACEHOLDER_0__": "'john'",
+			"__STRING_PLACEHOLDER_1__": "'new york'",
+		}
+		query := query.RestoreStringLiteral(q1, placeholders)
+		assert.Equal(t, `SELECT * FROM project.dataset.table WHERE name = 'john' AND age = 20 AND city = 'new york';`, query)
+	})
+	t.Run("returns query with restored string literals with multiple strings and special characters", func(t *testing.T) {
+		q1 := `SELECT * FROM project.dataset.table WHERE name = __STRING_PLACEHOLDER_0__ AND age = 20 AND city = __STRING_PLACEHOLDER_1__ AND address = __STRING_PLACEHOLDER_2__;`
+		placeholders := map[string]string{
+			"__STRING_PLACEHOLDER_0__": "'john'",
+			"__STRING_PLACEHOLDER_1__": "'new york'",
+			"__STRING_PLACEHOLDER_2__": "'1234 5th --Ave'",
+		}
+		query := query.RestoreStringLiteral(q1, placeholders)
+		assert.Equal(t, `SELECT * FROM project.dataset.table WHERE name = 'john' AND age = 20 AND city = 'new york' AND address = '1234 5th --Ave';`, query)
+	})
+}
