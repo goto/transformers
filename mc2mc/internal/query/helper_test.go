@@ -27,7 +27,7 @@ select * from playground`
 		q1 := `set odps.sql.allow.fullscan=true;
 select * from playground`
 		headers, query := query.SeparateHeadersAndQuery(q1)
-		assert.Equal(t, "set odps.sql.allow.fullscan=true;", headers)
+		assert.Equal(t, "set odps.sql.allow.fullscan=true\n;", headers)
 		assert.Equal(t, "select * from playground", query)
 	})
 	t.Run("splits headers and query with set syntax", func(t *testing.T) {
@@ -38,7 +38,7 @@ on append_test.id = source.id
 WHEN MATCHED THEN UPDATE
 SET append_test.id = 2;`
 		headers, query := query.SeparateHeadersAndQuery(q1)
-		assert.Equal(t, "set odps.sql.allow.fullscan=true;", headers)
+		assert.Equal(t, "set odps.sql.allow.fullscan=true\n;", headers)
 		assert.Equal(t, `MERGE INTO append_test
 USING (SELECT * FROM @src) source
 on append_test.id = source.id
@@ -57,8 +57,10 @@ where CAST(event_timestamp as DATE) = '{{ .DSTART | Date }}'
   and client_id in ('123')
 `
 		headers, query := query.SeparateHeadersAndQuery(q1)
-		expectedHeader := `set odps.sql.allow.fullscan=true;
-set odps.sql.python.version=cp37;`
+		expectedHeader := `set odps.sql.allow.fullscan=true
+;
+set odps.sql.python.version=cp37
+;`
 		assert.Equal(t, expectedHeader, headers)
 
 		expectedQuery := `select distinct event_timestamp,
@@ -73,7 +75,7 @@ where CAST(event_timestamp as DATE) = '{{ .DSTART | Date }}'
 		q1 := `set odps.sql.allow.fullscan=true;
 select CONCAT_WS('; ', COLLECT_LIST(dates)) AS dates from presentation.main.important_date`
 		headers, query := query.SeparateHeadersAndQuery(q1)
-		expectedHeader := `set odps.sql.allow.fullscan=true;`
+		expectedHeader := "set odps.sql.allow.fullscan=true\n;"
 		assert.Equal(t, expectedHeader, headers)
 
 		expectedQuery := `select CONCAT_WS('; ', COLLECT_LIST(dates)) AS dates from presentation.main.important_date`
@@ -92,9 +94,11 @@ where CAST(event_timestamp as DATE) = '{{ .DSTART | Date }}'
   and client_id in ('123')
 `
 		headers, query := query.SeparateHeadersAndQuery(q1)
-		expectedHeader := `set odps.sql.allow.fullscan=true;
+		expectedHeader := `set odps.sql.allow.fullscan=true
+;
 -- comment here
-set odps.sql.python.version=cp37;`
+set odps.sql.python.version=cp37
+;`
 		assert.Equal(t, expectedHeader, headers)
 
 		expectedQuery := `select distinct event_timestamp,
@@ -146,7 +150,7 @@ on append_test.id = source.id
 WHEN MATCHED THEN UPDATE
 SET append_test.id = 2;`
 		variables, query := query.SeparateVariablesUDFsAndQuery(q1)
-		assert.Equal(t, "@src := SELECT 1 id;", variables)
+		assert.Equal(t, "@src := SELECT 1 id\n;", variables)
 		assert.Equal(t, `MERGE INTO append_test
 USING (SELECT * FROM @src) source
 on append_test.id = source.id
@@ -173,15 +177,18 @@ SET append_test.id = 3;`
 		variables, query := query.SeparateVariablesUDFsAndQuery(q1)
 		assert.Equal(t, `@src := SELECT id
 FROM src_table
-WHERE id = 1;
+WHERE id = 1
+;
 @src2 := SELECT id
 FROM src_table
-WHERE id = 2;`, variables)
+WHERE id = 2
+;`, variables)
 		assert.Equal(t, `MERGE INTO append_test
 USING (SELECT * FROM @src) source
 on append_test.id = source.id
 WHEN MATCHED THEN UPDATE
-SET append_test.id = 2;
+SET append_test.id = 2
+;
 MERGE INTO append_test
 USING (SELECT * FROM @src2) source
 on append_test.id = source.id
@@ -209,16 +216,20 @@ SET append_test.id = 3;`
 		variables, query := query.SeparateVariablesUDFsAndQuery(q1)
 		assert.Equal(t, `@src := SELECT id
 FROM src_table
-WHERE id = 1;
-function my_add(@a BIGINT) as @a + 1;
+WHERE id = 1
+;
+function my_add(@a BIGINT) as @a + 1
+;
 @src2 := SELECT id
 FROM src_table
-WHERE id = 2;`, variables)
+WHERE id = 2
+;`, variables)
 		assert.Equal(t, `MERGE INTO append_test
 USING (SELECT * FROM @src) source
 on append_test.id = source.id
 WHEN MATCHED THEN UPDATE
-SET append_test.id = 2;
+SET append_test.id = 2
+;
 MERGE INTO append_test
 USING (SELECT * FROM @src2) source
 on append_test.id = source.id

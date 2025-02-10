@@ -33,10 +33,15 @@ func SeparateHeadersAndQuery(query string) (string, string) {
 		if stmt == "" {
 			continue
 		}
-		stmtWithoutComment := commentPattern.ReplaceAllString(stmt, "")
+		stmtWithoutComment := RemoveComments(stmt)
 		if headerPattern.MatchString(strings.TrimSpace(stmtWithoutComment)) {
 			headers = append(headers, stmt)
 		} else {
+			// if the statement is empty, it's a comment, then add it to the previous query
+			if strings.TrimSpace(stmtWithoutComment) == "" {
+				remainingQueries[len(remainingQueries)-1] += fmt.Sprintf("\n%s\n", stmt)
+				continue
+			}
 			remainingQueries = append(remainingQueries, stmt)
 		}
 	}
@@ -46,12 +51,12 @@ func SeparateHeadersAndQuery(query string) (string, string) {
 		for i, header := range headers {
 			headers[i] = strings.TrimSpace(header)
 		}
-		headerStr = strings.Join(headers, ";\n")
-		headerStr += ";"
+		headerStr = strings.Join(headers, "\n;\n")
+		headerStr += "\n;"
 	}
 
 	// join the remaining queries back together
-	queryStr := strings.Join(remainingQueries, ";\n")
+	queryStr := strings.Join(remainingQueries, "\n;\n")
 
 	return headerStr, queryStr
 }
@@ -68,11 +73,16 @@ func SeparateVariablesUDFsAndQuery(query string) (string, string) {
 		if stmt == "" {
 			continue
 		}
-		stmtWithoutComment := commentPattern.ReplaceAllString(stmt, "")
+		stmtWithoutComment := RemoveComments(stmt)
 		if variablePattern.MatchString(strings.TrimSpace(stmtWithoutComment)) ||
 			udfPattern.MatchString(strings.TrimSpace(stmtWithoutComment)) {
 			variablesAndUDFs = append(variablesAndUDFs, stmt)
 		} else {
+			// if the statement is empty, it's a comment, then add it to the previous query
+			if strings.TrimSpace(stmtWithoutComment) == "" {
+				remainingQueries[len(remainingQueries)-1] += fmt.Sprintf("\n%s\n", stmt)
+				continue
+			}
 			remainingQueries = append(remainingQueries, stmt)
 		}
 	}
@@ -82,12 +92,12 @@ func SeparateVariablesUDFsAndQuery(query string) (string, string) {
 		for i, variable := range variablesAndUDFs {
 			variablesAndUDFs[i] = strings.TrimSpace(variable)
 		}
-		variableUDFStr = strings.Join(variablesAndUDFs, ";\n")
-		variableUDFStr += ";"
+		variableUDFStr = strings.Join(variablesAndUDFs, "\n;\n")
+		variableUDFStr += "\n;"
 	}
 
 	// join the remaining queries back together
-	queryStr := strings.Join(remainingQueries, ";\n")
+	queryStr := strings.Join(remainingQueries, "\n;\n")
 
 	return variableUDFStr, queryStr
 }
