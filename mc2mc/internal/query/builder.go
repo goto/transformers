@@ -60,12 +60,8 @@ func (b *Builder) Build() (string, error) {
 		return "", errors.New("query is required")
 	}
 
-	// protect string inside single quotes
-	placeholders, query := ProtectedStringLiteral(b.query)
-
 	// separate headers, variables and udfs from the query
-	query = RemoveComments(query)
-	hr, query := SeparateHeadersAndQuery(query)
+	hr, query := SeparateHeadersAndQuery(b.query)
 	varsAndUDFs, query := SeparateVariablesUDFsAndQuery(query)
 
 	// merge method is a script, no need to construct query
@@ -75,7 +71,6 @@ func (b *Builder) Build() (string, error) {
 			return b.query, nil
 		}
 		query = b.constructMergeQuery(hr, varsAndUDFs, queries)
-		query = RestoreStringLiteral(query, placeholders)
 		return query, nil
 	}
 
@@ -145,7 +140,6 @@ func (b *Builder) Build() (string, error) {
 		varsAndUDFs += "\n"
 	}
 	query = fmt.Sprintf("%s%s%s", hr, varsAndUDFs, query)
-	query = RestoreStringLiteral(query, placeholders)
 	return query, nil
 }
 
@@ -194,7 +188,7 @@ func (b *Builder) constructMergeQuery(hr, varsAndUDFs string, queries []string) 
 	builder := strings.Builder{}
 	for i, q := range queries {
 		q = strings.TrimSpace(q)
-		if q == "" {
+		if q == "" || strings.TrimSpace(RemoveComments(q)) == "" {
 			continue
 		}
 		builder.WriteString(fmt.Sprintf("%s\n", hr))
@@ -203,7 +197,7 @@ func (b *Builder) constructMergeQuery(hr, varsAndUDFs string, queries []string) 
 				builder.WriteString(fmt.Sprintf("%s\n", varsAndUDFs))
 			}
 		}
-		builder.WriteString(fmt.Sprintf("%s;", q))
+		builder.WriteString(fmt.Sprintf("%s\n;", q))
 		if i < len(queries)-1 {
 			builder.WriteString(fmt.Sprintf("\n%s\n", BREAK_MARKER))
 		}

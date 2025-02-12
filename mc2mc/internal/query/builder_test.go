@@ -326,10 +326,17 @@ select * from project.playground.table;`
 		).Build()
 
 		assert.NoError(t, err)
-		assert.Equal(t, `set odps.table.append2.enable=true;
-set odps.table.append3.enable=true;
-function my_add(@a BIGINT) as @a + 1;
-@src := SELECT my_add(1) id;
+		assert.Equal(t, `set odps.table.append2.enable=true
+;
+set odps.table.append3.enable=true
+;
+-- this is comment
+function my_add(@a BIGINT) as @a + 1
+;
+/* maybe
+another comment */
+@src := SELECT my_add(1) id
+;
 INSERT INTO TABLE project.playground.table_destination 
 SELECT col1, col2, _partitiontime FROM (
 SELECT col1, col2, TIMESTAMP('2021-01-01') as _partitiontime FROM (
@@ -403,6 +410,7 @@ select * from project.playground.table
 SELECT col1, col2, _partitiontime FROM (
 SELECT col1, col2, TIMESTAMP('2021-01-01') as _partitiontime FROM (
 select * from project.playground.table
+-- this is comment
 )
 )
 ;`, queryToExecute)
@@ -438,6 +446,7 @@ select * from project.playground.table
 SELECT col1, col2, _partitiontime FROM (
 SELECT col1, col2, TIMESTAMP('2021-01-01') as _partitiontime FROM (
 select * from project.playground.table
+-- this is comment
 )
 )
 ;`, queryToExecute)
@@ -486,21 +495,29 @@ SET append_test.id = 2;`
 			query.WithMethod(query.MERGE),
 		).Build()
 		assert.NoError(t, err)
-		assert.Equal(t, `SET odps.table.append2.enable=true;
+		assert.Equal(t, `SET odps.table.append2.enable=true
+;
 CREATE TABLE IF NOT EXISTS append_test (id bigint)
-TBLPROPERTIES('table.format.version'='2');
+TBLPROPERTIES('table.format.version'='2')
+;
 --*--optimus-break-marker--*--
-SET odps.table.append2.enable=true;
-@src := SELECT 1 id;
-INSERT OVERWRITE TABLE append_test VALUES(0),(1);
+SET odps.table.append2.enable=true
+;
+@src := SELECT 1 id
+;
+INSERT OVERWRITE TABLE append_test VALUES(0),(1)
+;
 --*--optimus-break-marker--*--
-SET odps.table.append2.enable=true;
-@src := SELECT 1 id;
+SET odps.table.append2.enable=true
+;
+@src := SELECT 1 id
+;
 MERGE INTO append_test
 USING (SELECT * FROM @src) source
 on append_test.id = source.id
 WHEN MATCHED THEN UPDATE
-SET append_test.id = 2;`, query)
+SET append_test.id = 2
+;`, query)
 	})
 	t.Run("returns query for merge load method with multiple dml and ddl and contains function", func(t *testing.T) {
 		queryToExecute := `SET odps.table.append2.enable=true;
@@ -537,11 +554,14 @@ SET append_test.id = 2;`
 			query.WithMethod(query.MERGE),
 		).Build()
 		assert.NoError(t, err)
-		assert.Equal(t, `SET odps.table.append2.enable=true;
+		assert.Equal(t, `SET odps.table.append2.enable=true
+;
 CREATE TABLE IF NOT EXISTS append_test (id bigint)
-TBLPROPERTIES('table.format.version'='2');
+TBLPROPERTIES('table.format.version'='2')
+;
 --*--optimus-break-marker--*--
-SET odps.table.append2.enable=true;
+SET odps.table.append2.enable=true
+;
 FUNCTION castStringToBoolean (@field STRING) AS CASE
 WHEN TOLOWER(@field) = '1.0' THEN true
 WHEN TOLOWER(@field) = '0.0' THEN false
@@ -549,12 +569,17 @@ WHEN TOLOWER(@field) = '1' THEN true
 WHEN TOLOWER(@field) = '0' THEN false
 WHEN TOLOWER(@field) = 'true' THEN true
 WHEN TOLOWER(@field) = 'false' THEN false
-END;
-function my_add(@a BIGINT) as @a + 1;
-@src := SELECT my_add(1) id;
-INSERT OVERWRITE TABLE append_test VALUES(0),(1);
+END
+;
+function my_add(@a BIGINT) as @a + 1
+;
+@src := SELECT my_add(1) id
+;
+INSERT OVERWRITE TABLE append_test VALUES(0),(1)
+;
 --*--optimus-break-marker--*--
-SET odps.table.append2.enable=true;
+SET odps.table.append2.enable=true
+;
 FUNCTION castStringToBoolean (@field STRING) AS CASE
 WHEN TOLOWER(@field) = '1.0' THEN true
 WHEN TOLOWER(@field) = '0.0' THEN false
@@ -562,14 +587,103 @@ WHEN TOLOWER(@field) = '1' THEN true
 WHEN TOLOWER(@field) = '0' THEN false
 WHEN TOLOWER(@field) = 'true' THEN true
 WHEN TOLOWER(@field) = 'false' THEN false
-END;
-function my_add(@a BIGINT) as @a + 1;
-@src := SELECT my_add(1) id;
+END
+;
+function my_add(@a BIGINT) as @a + 1
+;
+@src := SELECT my_add(1) id
+;
 MERGE INTO append_test
 USING (SELECT castStringToBoolean(id) FROM @src) source
 on append_test.id = source.id
 WHEN MATCHED THEN UPDATE
-SET append_test.id = 2;`, query)
+SET append_test.id = 2
+;`, query)
+	})
+	t.Run("returns query for merge load method when there's a comment with semicolon", func(t *testing.T) {
+		queryToExecute := `SET odps.table.append2.enable=true;
+
+CREATE TABLE IF NOT EXISTS append_test (id bigint)
+TBLPROPERTIES('table.format.version'='2');
+
+FUNCTION castStringToBoolean (@field STRING) AS CASE
+WHEN TOLOWER(@field) = '1.0' THEN true
+WHEN TOLOWER(@field) = '0.0' THEN false
+WHEN TOLOWER(@field) = '1' THEN true
+WHEN TOLOWER(@field) = '0' THEN false
+WHEN TOLOWER(@field) = 'true' THEN true
+WHEN TOLOWER(@field) = 'false' THEN false
+END;
+
+function my_add(@a BIGINT) as @a + 1;
+
+INSERT OVERWRITE TABLE append_test VALUES(0),(1);
+
+@src := SELECT my_add(1) id;
+
+-- this is comment;
+
+MERGE INTO append_test
+USING (SELECT castStringToBoolean(id) FROM @src) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 2;`
+		odspClient := &mockOdpsClient{}
+
+		query, err := query.NewBuilder(
+			logger.NewDefaultLogger(),
+			odspClient,
+			query.WithQuery(queryToExecute),
+			query.WithMethod(query.MERGE),
+		).Build()
+		assert.NoError(t, err)
+		assert.Equal(t, `SET odps.table.append2.enable=true
+;
+CREATE TABLE IF NOT EXISTS append_test (id bigint)
+TBLPROPERTIES('table.format.version'='2')
+;
+--*--optimus-break-marker--*--
+SET odps.table.append2.enable=true
+;
+FUNCTION castStringToBoolean (@field STRING) AS CASE
+WHEN TOLOWER(@field) = '1.0' THEN true
+WHEN TOLOWER(@field) = '0.0' THEN false
+WHEN TOLOWER(@field) = '1' THEN true
+WHEN TOLOWER(@field) = '0' THEN false
+WHEN TOLOWER(@field) = 'true' THEN true
+WHEN TOLOWER(@field) = 'false' THEN false
+END
+;
+function my_add(@a BIGINT) as @a + 1
+;
+@src := SELECT my_add(1) id
+-- this is comment
+;
+INSERT OVERWRITE TABLE append_test VALUES(0),(1)
+;
+--*--optimus-break-marker--*--
+SET odps.table.append2.enable=true
+;
+FUNCTION castStringToBoolean (@field STRING) AS CASE
+WHEN TOLOWER(@field) = '1.0' THEN true
+WHEN TOLOWER(@field) = '0.0' THEN false
+WHEN TOLOWER(@field) = '1' THEN true
+WHEN TOLOWER(@field) = '0' THEN false
+WHEN TOLOWER(@field) = 'true' THEN true
+WHEN TOLOWER(@field) = 'false' THEN false
+END
+;
+function my_add(@a BIGINT) as @a + 1
+;
+@src := SELECT my_add(1) id
+-- this is comment
+;
+MERGE INTO append_test
+USING (SELECT castStringToBoolean(id) FROM @src) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 2
+;`, query)
 	})
 }
 
