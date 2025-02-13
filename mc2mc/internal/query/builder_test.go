@@ -446,7 +446,6 @@ select * from project.playground.table
 SELECT col1, col2, _partitiontime FROM (
 SELECT col1, col2, TIMESTAMP('2021-01-01') as _partitiontime FROM (
 select * from project.playground.table
--- this is comment
 )
 )
 ;`, queryToExecute)
@@ -657,7 +656,6 @@ END
 function my_add(@a BIGINT) as @a + 1
 ;
 @src := SELECT my_add(1) id
--- this is comment
 ;
 INSERT OVERWRITE TABLE append_test VALUES(0),(1)
 ;
@@ -676,7 +674,6 @@ END
 function my_add(@a BIGINT) as @a + 1
 ;
 @src := SELECT my_add(1) id
--- this is comment
 ;
 MERGE INTO append_test
 USING (SELECT castStringToBoolean(id) FROM @src) source
