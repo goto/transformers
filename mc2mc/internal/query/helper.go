@@ -36,12 +36,11 @@ func SeparateHeadersAndQuery(query string) (string, string) {
 		stmtWithoutComment := RemoveComments(stmt)
 		if headerPattern.MatchString(strings.TrimSpace(stmtWithoutComment)) {
 			headers = append(headers, stmt)
+		} else if strings.TrimSpace(stmtWithoutComment) == "" {
+			// if the statement is empty, it's a comment, then omit it
+			// since it doesn't make sense to execute this statement
+			continue
 		} else {
-			// if the statement is empty, it's a comment, then add it to the previous query
-			if strings.TrimSpace(stmtWithoutComment) == "" {
-				remainingQueries[len(remainingQueries)-1] += fmt.Sprintf("\n%s\n", stmt)
-				continue
-			}
 			remainingQueries = append(remainingQueries, stmt)
 		}
 	}
@@ -77,12 +76,10 @@ func SeparateVariablesUDFsAndQuery(query string) (string, string) {
 		if variablePattern.MatchString(strings.TrimSpace(stmtWithoutComment)) ||
 			udfPattern.MatchString(strings.TrimSpace(stmtWithoutComment)) {
 			variablesAndUDFs = append(variablesAndUDFs, stmt)
+		} else if strings.TrimSpace(stmtWithoutComment) == "" {
+			// if the statement is empty, it's a comment, then omit it
+			// since it doesn't make sense to execute this statement
 		} else {
-			// if the statement is empty, it's a comment, then add it to the previous query
-			if strings.TrimSpace(stmtWithoutComment) == "" {
-				remainingQueries[len(remainingQueries)-1] += fmt.Sprintf("\n%s\n", stmt)
-				continue
-			}
 			remainingQueries = append(remainingQueries, stmt)
 		}
 	}
