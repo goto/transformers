@@ -16,6 +16,7 @@ var (
 	multiCommentPattern = regexp.MustCompile(`(?s)/\*.*?\*/`)    // regex to match multi-line comments
 	headerPattern       = regexp.MustCompile(`(?i)^set`)         // regex to match header statements
 	variablePattern     = regexp.MustCompile(`(?i)^@`)           // regex to match variable statements
+	dropPattern         = regexp.MustCompile(`(?i)^DROP\s+`)     // regex to match DROP statements
 	udfPattern          = regexp.MustCompile(`(?i)^function\s+`) // regex to match UDF statements
 	ddlPattern          = regexp.MustCompile(`(?i)^CREATE\s+`)   // regex to match DDL statements
 	stringPattern       = regexp.MustCompile(`'[^']*'`)          // regex to match SQL strings (anything inside single quotes)
@@ -97,6 +98,44 @@ func SeparateVariablesUDFsAndQuery(query string) (string, string) {
 	queryStr := strings.Join(remainingQueries, "\n;\n")
 
 	return variableUDFStr, queryStr
+}
+
+func SeparateDropsAndQuery(query string) (string, string) {
+	drops := []string{}
+	query = strings.TrimSpace(query)
+	remainingQueries := []string{}
+
+	// extract all drop lines
+	stmts := semicolonPattern.Split(query, -1)
+	for _, stmt := range stmts {
+		stmt = strings.TrimSpace(stmt)
+		if stmt == "" {
+			continue
+		}
+		stmtWithoutComment := RemoveComments(stmt)
+		if dropPattern.MatchString(strings.TrimSpace(stmtWithoutComment)) {
+			drops = append(drops, stmt)
+		} else if strings.TrimSpace(stmtWithoutComment) == "" {
+			// if the statement is empty, it's a comment, then omit it
+			// since it doesn't make sense to execute this statement
+		} else {
+			remainingQueries = append(remainingQueries, stmt)
+		}
+	}
+
+	dropStr := ""
+	if len(drops) > 0 {
+		for i, drop := range drops {
+			drops[i] = strings.TrimSpace(drop)
+		}
+		dropStr = strings.Join(drops, "\n;\n")
+		dropStr += "\n;"
+	}
+
+	// join the remaining queries back together
+	queryStr := strings.Join(remainingQueries, "\n;\n")
+
+	return dropStr, queryStr
 }
 
 func RemoveComments(query string) string {
