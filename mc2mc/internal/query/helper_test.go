@@ -238,6 +238,38 @@ SET append_test.id = 3`, query)
 	})
 }
 
+func TestSeparateDropsAndQuery(t *testing.T) {
+	t.Run("returns query without drops", func(t *testing.T) {
+		q1 := `MERGE INTO append_test
+USING (SELECT * FROM @src) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 2;`
+		drops, query := query.SeparateDropsAndQuery(q1)
+		assert.Empty(t, drops)
+		assert.Equal(t, `MERGE INTO append_test
+USING (SELECT * FROM @src) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 2`, query)
+	})
+	t.Run("split drops and query", func(t *testing.T) {
+		q1 := `DROP TABLE IF EXISTS append_test;
+MERGE INTO append_test
+USING (SELECT * FROM @src) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 2;`
+		drops, query := query.SeparateDropsAndQuery(q1)
+		assert.Equal(t, "DROP TABLE IF EXISTS append_test\n;", drops)
+		assert.Equal(t, `MERGE INTO append_test
+USING (SELECT * FROM @src) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 2`, query)
+	})
+}
+
 func TestRemoveComments(t *testing.T) {
 	t.Run("returns query without single comments", func(t *testing.T) {
 		q1 := `-- comment here

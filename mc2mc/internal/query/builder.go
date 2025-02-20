@@ -63,14 +63,14 @@ func (b *Builder) Build() (string, error) {
 	// separate headers, variables and udfs from the query
 	hr, query := SeparateHeadersAndQuery(b.query)
 	varsAndUDFs, query := SeparateVariablesUDFsAndQuery(query)
+	drops, query := SeparateDropsAndQuery(query)
 
-	// merge method is a script, no need to construct query
 	if b.method == MERGE {
 		queries := semicolonPattern.Split(query, -1)
 		if len(queries) <= 1 {
 			return b.query, nil
 		}
-		query = b.constructMergeQuery(hr, varsAndUDFs, queries)
+		query = b.constructMergeQuery(hr, drops, varsAndUDFs, queries)
 		return query, nil
 	}
 
@@ -132,14 +132,17 @@ func (b *Builder) Build() (string, error) {
 		}
 	}
 
-	// construct final query with headers, variables and udfs
+	// construct final query with headers, drops, variables and udfs
 	if hr != "" {
 		hr += "\n"
+	}
+	if drops != "" {
+		drops += "\n"
 	}
 	if varsAndUDFs != "" {
 		varsAndUDFs += "\n"
 	}
-	query = fmt.Sprintf("%s%s%s", hr, varsAndUDFs, query)
+	query = fmt.Sprintf("%s%s%s%s", hr, drops, varsAndUDFs, query)
 	return query, nil
 }
 
@@ -184,18 +187,21 @@ func (b *Builder) constructOverridedValues(query string) (string, error) {
 }
 
 // constructMergeQueries constructs merge queries with headers and variables
-func (b *Builder) constructMergeQuery(hr, varsAndUDFs string, queries []string) string {
+func (b *Builder) constructMergeQuery(hr, drops, varsAndUDFs string, queries []string) string {
 	builder := strings.Builder{}
+	if drops != "" {
+		builder.WriteString(fmt.Sprintf("%s\n", hr))
+		builder.WriteString(fmt.Sprintf("%s\n", drops))
+		builder.WriteString(fmt.Sprintf("%s\n", BREAK_MARKER))
+	}
 	for i, q := range queries {
 		q = strings.TrimSpace(q)
 		if q == "" || strings.TrimSpace(RemoveComments(q)) == "" {
 			continue
 		}
 		builder.WriteString(fmt.Sprintf("%s\n", hr))
-		if !IsDDL(q) {
-			if varsAndUDFs != "" {
-				builder.WriteString(fmt.Sprintf("%s\n", varsAndUDFs))
-			}
+		if varsAndUDFs != "" {
+			builder.WriteString(fmt.Sprintf("%s\n", varsAndUDFs))
 		}
 		builder.WriteString(fmt.Sprintf("%s\n;", q))
 		if i < len(queries)-1 {
