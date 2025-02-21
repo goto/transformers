@@ -60,19 +60,20 @@ func (b *Builder) Build() (string, error) {
 		return "", errors.New("query is required")
 	}
 
+	if b.method == MERGE {
+		// split query components
+		hrs, vars, queries := SplitQueryComponents(b.query)
+		if len(queries) <= 1 {
+			return b.query, nil
+		}
+		query := b.constructMergeQuery(hrs, vars, queries)
+		return query, nil
+	}
+
 	// separate headers, variables and udfs from the query
 	hr, query := SeparateHeadersAndQuery(b.query)
 	varsAndUDFs, query := SeparateVariablesUDFsAndQuery(query)
 	drops, query := SeparateDropsAndQuery(query)
-
-	if b.method == MERGE {
-		queries := semicolonPattern.Split(query, -1)
-		if len(queries) <= 1 {
-			return b.query, nil
-		}
-		query = b.constructMergeQuery(hr, drops, varsAndUDFs, queries)
-		return query, nil
-	}
 
 	// destination table is required for append and replace method
 	if b.destinationTableID == "" {
@@ -187,21 +188,20 @@ func (b *Builder) constructOverridedValues(query string) (string, error) {
 }
 
 // constructMergeQueries constructs merge queries with headers and variables
-func (b *Builder) constructMergeQuery(hr, drops, varsAndUDFs string, queries []string) string {
+func (b *Builder) constructMergeQuery(hrs, vars, queries []string) string {
 	builder := strings.Builder{}
-	if drops != "" {
-		builder.WriteString(fmt.Sprintf("%s\n", hr))
-		builder.WriteString(fmt.Sprintf("%s\n", drops))
-		builder.WriteString(fmt.Sprintf("%s\n", BREAK_MARKER))
-	}
 	for i, q := range queries {
 		q = strings.TrimSpace(q)
 		if q == "" || strings.TrimSpace(RemoveComments(q)) == "" {
 			continue
 		}
-		builder.WriteString(fmt.Sprintf("%s\n", hr))
-		if varsAndUDFs != "" {
-			builder.WriteString(fmt.Sprintf("%s\n", varsAndUDFs))
+		headers := JoinSliceString(hrs[:i+1], "\n")
+		variables := JoinSliceString(vars[:i+1], "\n")
+		if headers != "" {
+			builder.WriteString(fmt.Sprintf("%s\n", headers))
+		}
+		if variables != "" {
+			builder.WriteString(fmt.Sprintf("%s\n", variables))
 		}
 		builder.WriteString(fmt.Sprintf("%s\n;", q))
 		if i < len(queries)-1 {
