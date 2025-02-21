@@ -22,3 +22,14 @@ six==1.15.0
 tzlocal==2.1
 urllib3==1.26.5
 sqlparse==0.4.2
+opentelemetry-api==1.30.0
+opentelemetry-distro==0.51b0
+opentelemetry-exporter-otlp==1.30.0
+opentelemetry-exporter-otlp-proto-common==1.30.0
+opentelemetry-exporter-otlp-proto-grpc==1.30.0
+opentelemetry-exporter-otlp-proto-http==1.30.0
+opentelemetry-instrumentation==0.51b0
+opentelemetry-instrumentation-system-metrics==0.51b0
+opentelemetry-proto==1.30.0
+opentelemetry-sdk==1.30.0
+opentelemetry-semantic-conventions==0.51b0
