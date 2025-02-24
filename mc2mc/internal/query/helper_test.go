@@ -8,6 +8,120 @@ import (
 	"github.com/goto/transformers/mc2mc/internal/query"
 )
 
+func TestSplitQueryComponents(t *testing.T) {
+	t.Run("returns query without headers and variables", func(t *testing.T) {
+		q1 := `select * from playground`
+		headers, varsUDFs, queries := query.SplitQueryComponents(q1)
+		assert.Len(t, headers, 1)
+		assert.Len(t, varsUDFs, 1)
+		assert.Len(t, queries, 1)
+		assert.Empty(t, headers[0])
+		assert.Empty(t, varsUDFs[0])
+		assert.Equal(t, q1, queries[0])
+	})
+	t.Run("returns headers, vars, and queries with proper order", func(t *testing.T) {
+		q1 := `set odps.sql.allow.fullscan=true;
+set odps.sql.python.version=cp37;
+DROP TABLE IF EXISTS append_test_tmp;
+
+@src := SELECT 1 id;
+@src2 := SELECT id
+FROM @src
+WHERE id = 1;
+CREATE TABLE append_test_tmp AS SELECT * FROM @src2;
+
+MERGE INTO append_test_tmp USING (SELECT * FROM @src) source
+on append_test_tmp.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test_tmp.id = 2;
+
+@src3 := SELECT id FROM append_test_tmp WHERE id = 2;
+MERGE INTO append_test USING (SELECT * FROM @src3) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 3;
+
+MERGE INTO append_test USING (SELECT * FROM @src3) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 3;
+`
+		headers, varsUDFs, queries := query.SplitQueryComponents(q1)
+		assert.Len(t, headers, 5)
+		assert.Len(t, varsUDFs, 5)
+		assert.Len(t, queries, 5)
+
+		// headers asserts
+		headersExpected := make([]string, 5)
+		headersExpected[0] = `set odps.sql.allow.fullscan=true
+;
+set odps.sql.python.version=cp37
+;`
+		headersExpected[1] = ""
+		headersExpected[2] = ""
+		headersExpected[3] = ""
+		headersExpected[4] = ""
+
+		// vars asserts
+		varsExpected := make([]string, 5)
+		varsExpected[0] = ""
+		varsExpected[1] = `@src := SELECT 1 id
+;
+@src2 := SELECT id
+FROM @src
+WHERE id = 1
+;`
+		varsExpected[2] = ""
+		varsExpected[3] = `@src3 := SELECT id FROM append_test_tmp WHERE id = 2
+;`
+		varsExpected[4] = ""
+
+		// queries asserts
+		queriesExpected := make([]string, 5)
+		queriesExpected[0] = "DROP TABLE IF EXISTS append_test_tmp"
+		queriesExpected[1] = "CREATE TABLE append_test_tmp AS SELECT * FROM @src2"
+		queriesExpected[2] = `MERGE INTO append_test_tmp USING (SELECT * FROM @src) source
+on append_test_tmp.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test_tmp.id = 2`
+		queriesExpected[3] = `MERGE INTO append_test USING (SELECT * FROM @src3) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 3`
+		queriesExpected[4] = `MERGE INTO append_test USING (SELECT * FROM @src3) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 3`
+
+		for i := range queries {
+			assert.Equal(t, headersExpected[i], headers[i])
+			assert.Equal(t, varsExpected[i], varsUDFs[i])
+			assert.Equal(t, queriesExpected[i], queries[i])
+		}
+	})
+}
+
+func TestJoinSliceString(t *testing.T) {
+	t.Run("returns empty string for empty slice", func(t *testing.T) {
+		slice := []string{}
+		delimiter := ";"
+		result := query.JoinSliceString(slice, delimiter)
+		assert.Empty(t, result)
+	})
+	t.Run("returns joined string with delimiter", func(t *testing.T) {
+		slice := []string{"set odps.sql.allow.fullscan=true", "set odps.sql.python.version=cp37"}
+		delimiter := ";"
+		result := query.JoinSliceString(slice, delimiter)
+		assert.Equal(t, "set odps.sql.allow.fullscan=true;set odps.sql.python.version=cp37", result)
+	})
+	t.Run("returns joined string with delimiter and skips empty strings", func(t *testing.T) {
+		slice := []string{"set odps.sql.allow.fullscan=true", "", "set odps.sql.python.version=cp37"}
+		delimiter := ";"
+		result := query.JoinSliceString(slice, delimiter)
+		assert.Equal(t, "set odps.sql.allow.fullscan=true;set odps.sql.python.version=cp37", result)
+	})
+}
+
 func TestSeparateHeadersAndQuery(t *testing.T) {
 	t.Run("returns query without macros", func(t *testing.T) {
 		q1 := `select * from playground`

@@ -22,6 +22,70 @@ var (
 	stringPattern       = regexp.MustCompile(`'[^']*'`)          // regex to match SQL strings (anything inside single quotes)
 )
 
+func SplitQueryComponents(query string) (headers []string, varsUDFs []string, queries []string) {
+	query = strings.TrimSpace(query)
+
+	// extract all header, variable and query lines
+	stmts := semicolonPattern.Split(query, -1)
+	queryIndex := 0
+	for _, stmt := range stmts {
+		stmt = strings.TrimSpace(stmt)
+		if stmt == "" {
+			continue
+		}
+		stmtWithoutComment := RemoveComments(stmt)
+		if headerPattern.MatchString(strings.TrimSpace(stmtWithoutComment)) {
+			for len(headers) <= queryIndex {
+				headers = append(headers, "")
+			}
+			headers[queryIndex] += strings.TrimSpace(stmt) + "\n;\n"
+		} else if variablePattern.MatchString(strings.TrimSpace(stmtWithoutComment)) ||
+			udfPattern.MatchString(strings.TrimSpace(stmtWithoutComment)) {
+			for len(varsUDFs) <= queryIndex {
+				varsUDFs = append(varsUDFs, "")
+			}
+			varsUDFs[queryIndex] += strings.TrimSpace(stmt) + "\n;\n"
+		} else if strings.TrimSpace(stmtWithoutComment) == "" {
+			// if the statement is empty, it's a comment, then omit it
+			// since it doesn't make sense to execute this statement
+		} else {
+			queries = append(queries, stmt)
+			queryIndex++
+		}
+	}
+
+	// fill in empty headers and varsUDFs + clear whitespace
+	for i := range queries {
+		if len(headers) == i {
+			headers = append(headers, "")
+		}
+		if len(varsUDFs) == i {
+			varsUDFs = append(varsUDFs, "")
+		}
+		headers[i] = strings.TrimSpace(headers[i])
+		varsUDFs[i] = strings.TrimSpace(varsUDFs[i])
+		queries[i] = strings.TrimSpace(queries[i])
+	}
+
+	return headers, varsUDFs, queries
+}
+
+// JoinSliceString joins a slice of strings with a delimiter
+// and skips empty strings
+func JoinSliceString(slice []string, delimiter string) string {
+	builder := strings.Builder{}
+	for i, s := range slice {
+		if s == "" {
+			continue
+		}
+		if i > 0 {
+			builder.WriteString(delimiter)
+		}
+		builder.WriteString(s)
+	}
+	return strings.TrimSpace(builder.String())
+}
+
 func SeparateHeadersAndQuery(query string) (string, string) {
 	headers := []string{}
 	query = strings.TrimSpace(query)
