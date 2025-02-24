@@ -11,7 +11,7 @@ test:
   coverage: '/coverage \d+%/'
   script:
     - apk add build-base
-    - pip install --no-deps -r requirements-test.txt
+    - pip install -r requirements-test.txt
     - coverage run setup.py test
     - echo "coverage $(coverage report | awk '{print $6}' | tail -n 1)"
     - coverage report
