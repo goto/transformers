@@ -9,19 +9,20 @@ import (
 
 // ConfigEnv is a mc configuration for the component.
 type ConfigEnv struct {
-	LogLevel                    string `env:"LOG_LEVEL" envDefault:"INFO"`
-	OtelCollectorGRPCEndpoint   string `env:"OTEL_COLLECTOR_GRPC_ENDPOINT"`
-	OtelAttributes              string `env:"OTEL_ATTRIBUTES"`
-	MCServiceAccount            string `env:"MC_SERVICE_ACCOUNT"`
-	LoadMethod                  string `env:"LOAD_METHOD" envDefault:"APPEND"`
-	QueryFilePath               string `env:"QUERY_FILE_PATH" envDefault:"/data/in/query.sql"`
-	DestinationTableID          string `env:"DESTINATION_TABLE_ID"`
-	DStart                      string `env:"DSTART"`
-	DEnd                        string `env:"DEND"`
-	ExecutionProject            string `env:"EXECUTION_PROJECT"`
-	Concurrency                 int    `env:"CONCURRENCY" envDefault:"7"`
-	LogViewRetentionInDays      int    `env:"LOG_VIEW_RETENTION_IN_DAYS" envDefault:"2"`
-	DisableMultiQueryGeneration bool   `env:"DISABLE_MULTI_QUERY_GENERATION" envDefault:"false"`
+	LogLevel                    string            `env:"LOG_LEVEL" envDefault:"INFO"`
+	OtelCollectorGRPCEndpoint   string            `env:"OTEL_COLLECTOR_GRPC_ENDPOINT"`
+	OtelAttributes              string            `env:"OTEL_ATTRIBUTES"`
+	MCServiceAccount            string            `env:"MC_SERVICE_ACCOUNT"`
+	LoadMethod                  string            `env:"LOAD_METHOD" envDefault:"APPEND"`
+	QueryFilePath               string            `env:"QUERY_FILE_PATH" envDefault:"/data/in/query.sql"`
+	DestinationTableID          string            `env:"DESTINATION_TABLE_ID"`
+	DStart                      string            `env:"DSTART"`
+	DEnd                        string            `env:"DEND"`
+	ExecutionProject            string            `env:"EXECUTION_PROJECT"`
+	Concurrency                 int               `env:"CONCURRENCY" envDefault:"7"`
+	AdditionalHints             map[string]string `env:"ADDITIONAL_HINTS" envKeyValSeparator:"=" envSeparator:","`
+	LogViewRetentionInDays      int               `env:"LOG_VIEW_RETENTION_IN_DAYS" envDefault:"2"`
+	DisableMultiQueryGeneration bool              `env:"DISABLE_MULTI_QUERY_GENERATION" envDefault:"false"`
 	// TODO: delete this
 	DevEnablePartitionValue string `env:"DEV__ENABLE_PARTITION_VALUE" envDefault:"false"`
 	DevEnableAutoPartition  string `env:"DEV__ENABLE_AUTO_PARTITION" envDefault:"false"`
