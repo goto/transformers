@@ -16,6 +16,7 @@ type odpsClient struct {
 	client *odps.Odps
 
 	logViewRetentionInDays int
+	additionalHints        map[string]string
 }
 
 // NewODPSClient creates a new odpsClient instance
@@ -31,7 +32,7 @@ func NewODPSClient(logger *slog.Logger, client *odps.Odps) *odpsClient {
 // with capability to do graceful shutdown by terminating task instance
 // when context is cancelled.
 func (c *odpsClient) ExecSQL(ctx context.Context, query string) error {
-	hints := addHints(query)
+	hints := addHints(c.additionalHints, query)
 	taskIns, err := c.client.ExecSQlWithHints(query, hints)
 	if err != nil {
 		return errors.WithStack(err)
@@ -55,6 +56,11 @@ func (c *odpsClient) ExecSQL(ctx context.Context, query string) error {
 	case err := <-wait(taskIns):
 		return errors.WithStack(err)
 	}
+}
+
+// SetAdditionalHints sets the additional hints for the odps client
+func (c *odpsClient) SetAdditionalHints(hints map[string]string) {
+	c.additionalHints = hints
 }
 
 // SetLogViewRetentionInDays sets the log view retention in days
@@ -108,15 +114,17 @@ func wait(taskIns *odps.Instance) <-chan error {
 	return errChan
 }
 
-func addHints(query string) map[string]string {
+func addHints(additionalHints map[string]string, query string) map[string]string {
+	hints := make(map[string]string)
+	for k, v := range additionalHints {
+		hints[k] = v
+	}
 	multisql := strings.Contains(query, ";")
 	if multisql {
-		return map[string]string{
-			"odps.sql.submit.mode": "script",
-		}
+		hints["odps.sql.submit.mode"] = "script"
 	}
 
-	return nil
+	return hints
 }
 
 // getTable returns the table with the given tableID

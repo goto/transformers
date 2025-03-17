@@ -44,6 +44,7 @@ func mc2mc(envs []string) error {
 		client.SetupODPSClient(cfg.GenOdps()),
 		client.SetupDefaultProject(cfg.ExecutionProject),
 		client.SetUpLogViewRetentionInDays(cfg.LogViewRetentionInDays),
+		client.SetupAdditionalHints(cfg.AdditionalHints),
 	)
 	if err != nil {
 		return errors.WithStack(err)

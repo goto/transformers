@@ -10,6 +10,18 @@ import (
 
 type SetupFn func(c *Client) error
 
+func SetupAdditionalHints(hints map[string]string) SetupFn {
+	return func(c *Client) error {
+		if c.OdpsClient == nil {
+			return errors.New("odps client is required")
+		}
+		if hints != nil {
+			c.OdpsClient.SetAdditionalHints(hints)
+		}
+		return nil
+	}
+}
+
 func SetUpLogViewRetentionInDays(days int) SetupFn {
 	return func(c *Client) error {
 		if c.OdpsClient == nil {

@@ -13,6 +13,7 @@ type OdpsClient interface {
 	ExecSQL(ctx context.Context, query string) error
 	SetDefaultProject(project string)
 	SetLogViewRetentionInDays(days int)
+	SetAdditionalHints(hints map[string]string)
 }
 
 type Client struct {
