@@ -76,8 +76,8 @@ func mc2mc(envs []string) error {
 			query.WithQuery(string(raw)),
 			query.WithMethod(query.APPEND),
 			query.WithDestination(cfg.DestinationTableID),
-			query.WithOverridedValue("_partitiontime", fmt.Sprintf("TIMESTAMP('%s')", dstart)),
-			query.WithOverridedValue("_partitiondate", fmt.Sprintf("DATE(TIMESTAMP('%s'))", dstart)),
+			query.WithOverridedValue("_partitiontime", fmt.Sprintf("timestamp('%s')", dstart)),
+			query.WithOverridedValue("_partitiondate", fmt.Sprintf("DATE(timestamp('%s'))", dstart)),
 			query.WithAutoPartition(cfg.DevEnableAutoPartition == "true"),
 			query.WithPartitionValue(cfg.DevEnablePartitionValue == "true"),
 			query.WithColumnOrder(),
@@ -103,8 +103,8 @@ func mc2mc(envs []string) error {
 		if cfg.DisableMultiQueryGeneration {
 			queryToExecute, err := queryBuilder.SetOptions(
 				query.WithQuery(string(raw)),
-				query.WithOverridedValue("_partitiontime", fmt.Sprintf("TIMESTAMP('%s')", dstart)),
-				query.WithOverridedValue("_partitiondate", fmt.Sprintf("DATE(TIMESTAMP('%s'))", dstart)),
+				query.WithOverridedValue("_partitiontime", fmt.Sprintf("timestamp('%s')", dstart)),
+				query.WithOverridedValue("_partitiondate", fmt.Sprintf("DATE(timestamp('%s'))", dstart)),
 			).Build()
 			if err != nil {
 				return errors.WithStack(err)
@@ -135,8 +135,8 @@ func mc2mc(envs []string) error {
 			currentQueryBuilder := queryBuilder
 			queryToExecute, err := currentQueryBuilder.SetOptions(
 				query.WithQuery(currentQueryToExecute),
-				query.WithOverridedValue("_partitiontime", fmt.Sprintf("TIMESTAMP('%s')", dates[i])),
-				query.WithOverridedValue("_partitiondate", fmt.Sprintf("DATE(TIMESTAMP('%s'))", dates[i])),
+				query.WithOverridedValue("_partitiontime", fmt.Sprintf("timestamp('%s')", dates[i])),
+				query.WithOverridedValue("_partitiondate", fmt.Sprintf("DATE(timestamp('%s'))", dates[i])),
 			).Build()
 			if err != nil {
 				return errors.WithStack(err)
