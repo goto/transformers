@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/aliyun/aliyun-odps-go-sdk/odps"
 	"github.com/pkg/errors"
@@ -53,7 +54,7 @@ func (c *odpsClient) ExecSQL(ctx context.Context, query string) error {
 		c.logger.Info("context cancelled, terminating task instance")
 		err := taskIns.Terminate()
 		return e.Join(ctx.Err(), err)
-	case err := <-wait(taskIns):
+	case err := <-wait(ctx, c.logger, taskIns):
 		return errors.WithStack(err)
 	}
 }
@@ -104,12 +105,30 @@ func (c *odpsClient) GetOrderedColumns(tableID string) ([]string, error) {
 }
 
 // wait waits for the task instance to finish on a separate goroutine
-func wait(taskIns *odps.Instance) <-chan error {
+func wait(ctx context.Context, l *slog.Logger, taskIns *odps.Instance) <-chan error {
 	errChan := make(chan error)
+	done := make(chan uint8)
+	// progress log
+	go func() {
+		for {
+			select {
+			case <-done:
+				l.Info(fmt.Sprintf("execution finished with status: %s", taskIns.Status()))
+				return
+			case <-ctx.Done():
+				return
+			default:
+				l.Info("execution in progress...")
+				time.Sleep(time.Second * 60)
+			}
+		}
+	}()
+	// wait for task instance to finish
 	go func(errChan chan<- error) {
 		defer close(errChan)
 		err := taskIns.WaitForSuccess()
 		errChan <- errors.WithStack(err)
+		done <- 0
 	}(errChan)
 	return errChan
 }
