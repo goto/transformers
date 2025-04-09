@@ -54,7 +54,7 @@ func (c *odpsClient) ExecSQL(ctx context.Context, query string) error {
 		c.logger.Info("context cancelled, terminating task instance")
 		err := taskIns.Terminate()
 		return e.Join(ctx.Err(), err)
-	case err := <-wait(ctx, c.logger, taskIns):
+	case err := <-c.wait(ctx, taskIns):
 		return errors.WithStack(err)
 	}
 }
@@ -105,7 +105,7 @@ func (c *odpsClient) GetOrderedColumns(tableID string) ([]string, error) {
 }
 
 // wait waits for the task instance to finish on a separate goroutine
-func wait(ctx context.Context, l *slog.Logger, taskIns *odps.Instance) <-chan error {
+func (c *odpsClient) wait(ctx context.Context, taskIns *odps.Instance) <-chan error {
 	errChan := make(chan error)
 	done := make(chan uint8)
 	// progress log
@@ -113,12 +113,12 @@ func wait(ctx context.Context, l *slog.Logger, taskIns *odps.Instance) <-chan er
 		for {
 			select {
 			case <-done:
-				l.Info(fmt.Sprintf("execution finished with status: %s", taskIns.Status()))
+				c.logger.Info(fmt.Sprintf("execution finished with status: %s", taskIns.Status()))
 				return
 			case <-ctx.Done():
 				return
 			default:
-				l.Info("execution in progress...")
+				c.logger.Info("execution in progress...")
 				time.Sleep(time.Second * 60)
 			}
 		}
@@ -126,11 +126,16 @@ func wait(ctx context.Context, l *slog.Logger, taskIns *odps.Instance) <-chan er
 	// wait for task instance to finish
 	go func(errChan chan<- error) {
 		defer close(errChan)
-		err := taskIns.WaitForSuccess()
+		err := c.retry(taskIns.WaitForSuccess)
 		errChan <- errors.WithStack(err)
 		done <- 0
 	}(errChan)
 	return errChan
+}
+
+// retry retries the given function with exponential backoff
+func (c *odpsClient) retry(f func() error) error {
+	return retry(c.logger, 3, 1000, f)
 }
 
 func addHints(additionalHints map[string]string, query string) map[string]string {
@@ -173,4 +178,22 @@ func getTable(client *odps.Odps, tableID string) (*odps.Table, error) {
 		return nil, errors.WithStack(err)
 	}
 	return table, nil
+}
+
+func retry(l *slog.Logger, retryMax int, retryBackoffMs int64, f func() error) error {
+	var err error
+	sleepTime := int64(1)
+
+	for i := range retryMax {
+		err = f()
+		if err == nil {
+			return nil
+		}
+
+		l.Warn(fmt.Sprintf("retry: %d, error: %v", i, err))
+		sleepTime *= 1 << i
+		time.Sleep(time.Duration(sleepTime*retryBackoffMs) * time.Millisecond)
+	}
+
+	return err
 }
