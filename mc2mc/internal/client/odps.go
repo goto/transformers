@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/aliyun/aliyun-odps-go-sdk/odps"
 	"github.com/pkg/errors"
@@ -44,16 +45,15 @@ func (c *odpsClient) ExecSQL(ctx context.Context, query string) error {
 		err = e.Join(err, taskIns.Terminate())
 		return errors.WithStack(err)
 	}
-	c.logger.Info(fmt.Sprintf("log view: %s", url))
+	c.logger.Info(fmt.Sprintf("taskId: %s, log view: %s", taskIns.Id(), url))
 
 	// wait execution success
-	c.logger.Info(fmt.Sprintf("taskId: %s", taskIns.Id()))
 	select {
 	case <-ctx.Done():
 		c.logger.Info("context cancelled, terminating task instance")
 		err := taskIns.Terminate()
 		return e.Join(ctx.Err(), err)
-	case err := <-wait(taskIns):
+	case err := <-c.wait(taskIns):
 		return errors.WithStack(err)
 	}
 }
@@ -104,14 +104,48 @@ func (c *odpsClient) GetOrderedColumns(tableID string) ([]string, error) {
 }
 
 // wait waits for the task instance to finish on a separate goroutine
-func wait(taskIns *odps.Instance) <-chan error {
+func (c *odpsClient) wait(taskIns *odps.Instance) <-chan error {
 	errChan := make(chan error)
+	// wait for task instance to finish
+	c.logger.Info(fmt.Sprintf("waiting for task instance %s to finish...", taskIns.Id()))
 	go func(errChan chan<- error) {
 		defer close(errChan)
-		err := taskIns.WaitForSuccess()
-		errChan <- errors.WithStack(err)
+		err := c.retry(taskIns.WaitForSuccess)
+		if err != nil {
+			errChan <- errors.WithStack(err)
+		}
+		c.logger.Info(fmt.Sprintf("task instance %s finished with status: %s", taskIns.Id(), taskIns.Status()))
+		sum, err := taskIns.GetTaskSummary(taskIns.TaskNameCommitted())
+		if err != nil {
+			c.logger.Warn(fmt.Sprintf("failed to get task summary: %s", err))
+		} else {
+			c.logger.Info(fmt.Sprintf("task summary: %s", sum.Summary))
+		}
 	}(errChan)
 	return errChan
+}
+
+// retry retries the given function with exponential backoff
+func (c *odpsClient) retry(f func() error) error {
+	return retry(c.logger, 3, 1000, f)
+}
+
+func (c *odpsClient) terminate(instance *odps.Instance) error {
+	if instance == nil {
+		return nil
+	}
+	if err := c.retry(instance.Load); err != nil {
+		return errors.WithStack(err)
+	}
+	if instance.Status() == odps.InstanceTerminated { // instance is terminated, no need to terminate again
+		return nil
+	}
+	c.logger.Info(fmt.Sprintf("trying to terminate instance %s", instance.Id()))
+	if err := c.retry(instance.Terminate); err != nil {
+		return errors.WithStack(err)
+	}
+	c.logger.Info(fmt.Sprintf("success terminating instance %s", instance.Id()))
+	return nil
 }
 
 func addHints(additionalHints map[string]string, query string) map[string]string {
@@ -154,4 +188,22 @@ func getTable(client *odps.Odps, tableID string) (*odps.Table, error) {
 		return nil, errors.WithStack(err)
 	}
 	return table, nil
+}
+
+func retry(l *slog.Logger, retryMax int, retryBackoffMs int64, f func() error) error {
+	var err error
+	sleepTime := int64(1)
+
+	for i := range retryMax {
+		err = f()
+		if err == nil {
+			return nil
+		}
+
+		l.Warn(fmt.Sprintf("retry: %d, error: %v", i, err))
+		sleepTime *= 1 << i
+		time.Sleep(time.Duration(sleepTime*retryBackoffMs) * time.Millisecond)
+	}
+
+	return err
 }
