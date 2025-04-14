@@ -49,6 +49,7 @@ func (c *odpsClient) ExecSQL(ctx context.Context, query string) error {
 
 	// wait execution success
 	c.logger.Info(fmt.Sprintf("taskId: %s", taskIns.Id()))
+	ticker := time.NewTicker(time.Minute * 1)
 	errChan := c.wait(taskIns)
 	for {
 		select {
@@ -59,9 +60,10 @@ func (c *odpsClient) ExecSQL(ctx context.Context, query string) error {
 		case err := <-errChan:
 			c.logger.Info(fmt.Sprintf("execution finished with status: %s", taskIns.Status()))
 			return errors.WithStack(err)
-		default:
+		case <-ticker.C:
 			c.logger.Info("execution in progress...")
-			time.Sleep(time.Minute * 1)
+		default:
+			time.Sleep(time.Second)
 		}
 	}
 }
@@ -118,7 +120,6 @@ func (c *odpsClient) wait(taskIns *odps.Instance) <-chan error {
 	go func(errChan chan<- error) {
 		defer close(errChan)
 		err := c.retry(taskIns.WaitForSuccess)
-		c.logger.Info("finished")
 		errChan <- errors.WithStack(err)
 	}(errChan)
 	return errChan
