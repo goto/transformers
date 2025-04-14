@@ -49,13 +49,20 @@ func (c *odpsClient) ExecSQL(ctx context.Context, query string) error {
 
 	// wait execution success
 	c.logger.Info(fmt.Sprintf("taskId: %s", taskIns.Id()))
-	select {
-	case <-ctx.Done():
-		c.logger.Info("context cancelled, terminating task instance")
-		err := taskIns.Terminate()
-		return e.Join(ctx.Err(), err)
-	case err := <-c.wait(ctx, taskIns):
-		return errors.WithStack(err)
+	errChan := c.wait(taskIns)
+	for {
+		select {
+		case <-ctx.Done():
+			c.logger.Info("context cancelled, terminating task instance")
+			err := c.terminate(taskIns)
+			return e.Join(ctx.Err(), err)
+		case err := <-errChan:
+			c.logger.Info(fmt.Sprintf("execution finished with status: %s", taskIns.Status()))
+			return errors.WithStack(err)
+		default:
+			c.logger.Info("execution in progress...")
+			time.Sleep(time.Minute * 1)
+		}
 	}
 }
 
@@ -105,30 +112,14 @@ func (c *odpsClient) GetOrderedColumns(tableID string) ([]string, error) {
 }
 
 // wait waits for the task instance to finish on a separate goroutine
-func (c *odpsClient) wait(ctx context.Context, taskIns *odps.Instance) <-chan error {
+func (c *odpsClient) wait(taskIns *odps.Instance) <-chan error {
 	errChan := make(chan error)
-	done := make(chan uint8)
-	// progress log
-	go func() {
-		for {
-			select {
-			case <-done:
-				c.logger.Info(fmt.Sprintf("execution finished with status: %s", taskIns.Status()))
-				return
-			case <-ctx.Done():
-				return
-			default:
-				c.logger.Info("execution in progress...")
-				time.Sleep(time.Second * 60)
-			}
-		}
-	}()
 	// wait for task instance to finish
 	go func(errChan chan<- error) {
 		defer close(errChan)
 		err := c.retry(taskIns.WaitForSuccess)
+		c.logger.Info("finished")
 		errChan <- errors.WithStack(err)
-		done <- 0
 	}(errChan)
 	return errChan
 }
@@ -136,6 +127,24 @@ func (c *odpsClient) wait(ctx context.Context, taskIns *odps.Instance) <-chan er
 // retry retries the given function with exponential backoff
 func (c *odpsClient) retry(f func() error) error {
 	return retry(c.logger, 3, 1000, f)
+}
+
+func (c *odpsClient) terminate(instance *odps.Instance) error {
+	if instance == nil {
+		return nil
+	}
+	if err := c.retry(instance.Load); err != nil {
+		return errors.WithStack(err)
+	}
+	if instance.Status() == odps.InstanceTerminated { // instance is terminated, no need to terminate again
+		return nil
+	}
+	c.logger.Info(fmt.Sprintf("trying to terminate instance %s", instance.Id()))
+	if err := c.retry(instance.Terminate); err != nil {
+		return errors.WithStack(err)
+	}
+	c.logger.Info(fmt.Sprintf("success terminating instance %s", instance.Id()))
+	return nil
 }
 
 func addHints(additionalHints map[string]string, query string) map[string]string {
