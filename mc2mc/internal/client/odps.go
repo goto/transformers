@@ -45,26 +45,16 @@ func (c *odpsClient) ExecSQL(ctx context.Context, query string) error {
 		err = e.Join(err, taskIns.Terminate())
 		return errors.WithStack(err)
 	}
-	c.logger.Info(fmt.Sprintf("log view: %s", url))
+	c.logger.Info(fmt.Sprintf("taskId: %s, log view: %s", taskIns.Id(), url))
 
 	// wait execution success
-	c.logger.Info(fmt.Sprintf("taskId: %s", taskIns.Id()))
-	ticker := time.NewTicker(time.Minute * 1)
-	errChan := c.wait(taskIns)
-	for {
-		select {
-		case <-ctx.Done():
-			c.logger.Info("context cancelled, terminating task instance")
-			err := c.terminate(taskIns)
-			return e.Join(ctx.Err(), err)
-		case err := <-errChan:
-			c.logger.Info(fmt.Sprintf("execution finished with status: %s", taskIns.Status()))
-			return errors.WithStack(err)
-		case <-ticker.C:
-			c.logger.Info("execution in progress...")
-		default:
-			time.Sleep(time.Second)
-		}
+	select {
+	case <-ctx.Done():
+		c.logger.Info("context cancelled, terminating task instance")
+		err := taskIns.Terminate()
+		return e.Join(ctx.Err(), err)
+	case err := <-c.wait(taskIns):
+		return errors.WithStack(err)
 	}
 }
 
@@ -117,10 +107,20 @@ func (c *odpsClient) GetOrderedColumns(tableID string) ([]string, error) {
 func (c *odpsClient) wait(taskIns *odps.Instance) <-chan error {
 	errChan := make(chan error)
 	// wait for task instance to finish
+	c.logger.Info(fmt.Sprintf("waiting for task instance %s to finish...", taskIns.Id()))
 	go func(errChan chan<- error) {
 		defer close(errChan)
 		err := c.retry(taskIns.WaitForSuccess)
-		errChan <- errors.WithStack(err)
+		if err != nil {
+			errChan <- errors.WithStack(err)
+		}
+		c.logger.Info(fmt.Sprintf("task instance %s finished with status: %s", taskIns.Id(), taskIns.Status()))
+		sum, err := taskIns.GetTaskSummary(taskIns.TaskNameCommitted())
+		if err != nil {
+			c.logger.Warn(fmt.Sprintf("failed to get task summary: %s", err))
+		} else {
+			c.logger.Info(fmt.Sprintf("task summary: %s", sum.Summary))
+		}
 	}(errChan)
 	return errChan
 }
