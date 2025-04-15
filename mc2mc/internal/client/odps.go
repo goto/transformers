@@ -38,13 +38,7 @@ func (c *odpsClient) ExecSQL(ctx context.Context, query string, additionalHints 
 		return nil
 	}
 
-	// add job-specific hints, which takes priority over the global hints
 	hints := addHints(additionalHints, query)
-
-	logHints := make([]string, 0)
-	for k, v := range hints {
-		logHints = append(logHints, fmt.Sprintf("%s: %s", k, v))
-	}
 
 	taskIns, err := c.client.ExecSQlWithHints(query, hints)
 	if err != nil {
@@ -57,7 +51,7 @@ func (c *odpsClient) ExecSQL(ctx context.Context, query string, additionalHints 
 		err = e.Join(err, taskIns.Terminate())
 		return errors.WithStack(err)
 	}
-	c.logger.Info(fmt.Sprintf("taskId: %s, log view: %s, hints: (%s)", taskIns.Id(), url, strings.Join(logHints, ", ")))
+	c.logger.Info(fmt.Sprintf("taskId: %s, log view: %s, hints: (%s)", taskIns.Id(), url, getHintsString(hints)))
 
 	// wait execution success
 	select {
@@ -218,4 +212,15 @@ func retry(l *slog.Logger, retryMax int, retryBackoffMs int64, f func() error) e
 	}
 
 	return err
+}
+
+func getHintsString(hints map[string]string) string {
+	if hints == nil {
+		return ""
+	}
+	var hintsStr []string
+	for k, v := range hints {
+		hintsStr = append(hintsStr, fmt.Sprintf("%s: %s", k, v))
+	}
+	return strings.Join(hintsStr, ", ")
 }
