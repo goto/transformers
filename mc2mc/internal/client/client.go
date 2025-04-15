@@ -9,11 +9,14 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	SqlScriptSequenceHint = "goto.sql.script.sequence"
+)
+
 type OdpsClient interface {
-	ExecSQL(ctx context.Context, query string) error
+	ExecSQL(ctx context.Context, query string, hints map[string]string) error
 	SetDefaultProject(project string)
 	SetLogViewRetentionInDays(days int)
-	SetAdditionalHints(hints map[string]string)
 	SetDryRun(dryRun bool)
 }
 
@@ -47,13 +50,21 @@ func (c *Client) Close() error {
 	return errors.WithStack(err)
 }
 
-func (c *Client) Execute(ctx context.Context, query string) error {
-	// execute query with odps client
-	c.logger.Info(fmt.Sprintf("query to execute:\n%s", query))
-	if err := c.OdpsClient.ExecSQL(ctx, query); err != nil {
-		return errors.WithStack(err)
-	}
+func (c *Client) ExecuteFn(id int) func(context.Context, string, map[string]string) error {
+	return func(ctx context.Context, query string, additionalHints map[string]string) error {
+		// execute query with odps client
+		c.logger.Info(fmt.Sprintf("[sequence: %d] query to execute:\n%s", id, query))
+		// Merge additionalHints with the id
+		if additionalHints == nil {
+			additionalHints = make(map[string]string)
+		}
+		additionalHints[SqlScriptSequenceHint] = fmt.Sprintf("%d", id)
 
-	c.logger.Info("execution done")
-	return nil
+		if err := c.OdpsClient.ExecSQL(ctx, query, additionalHints); err != nil {
+			return errors.WithStack(err)
+		}
+
+		c.logger.Info(fmt.Sprintf("[sequence: %d] execution done", id))
+		return nil
+	}
 }

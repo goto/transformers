@@ -17,7 +17,6 @@ type odpsClient struct {
 	client *odps.Odps
 
 	logViewRetentionInDays int
-	additionalHints        map[string]string
 	isDryRun               bool
 }
 
@@ -33,12 +32,14 @@ func NewODPSClient(logger *slog.Logger, client *odps.Odps) *odpsClient {
 // ExecSQL executes the given query in syncronous mode (blocking)
 // with capability to do graceful shutdown by terminating task instance
 // when context is cancelled.
-func (c *odpsClient) ExecSQL(ctx context.Context, query string) error {
+func (c *odpsClient) ExecSQL(ctx context.Context, query string, additionalHints map[string]string) error {
 	if c.isDryRun {
 		c.logger.Info("dry run mode, skipping execution")
 		return nil
 	}
-	hints := addHints(c.additionalHints, query)
+
+	hints := addHints(additionalHints, query)
+
 	taskIns, err := c.client.ExecSQlWithHints(query, hints)
 	if err != nil {
 		return errors.WithStack(err)
@@ -50,22 +51,17 @@ func (c *odpsClient) ExecSQL(ctx context.Context, query string) error {
 		err = e.Join(err, taskIns.Terminate())
 		return errors.WithStack(err)
 	}
-	c.logger.Info(fmt.Sprintf("taskId: %s, log view: %s", taskIns.Id(), url))
+	c.logger.Info(fmt.Sprintf("taskId: %s, log view: %s, hints: (%s)", taskIns.Id(), url, getHintsString(hints)))
 
 	// wait execution success
 	select {
 	case <-ctx.Done():
 		c.logger.Info("context cancelled, terminating task instance")
-		err := taskIns.Terminate()
+		err := c.terminate(taskIns)
 		return e.Join(ctx.Err(), err)
 	case err := <-c.wait(taskIns):
 		return errors.WithStack(err)
 	}
-}
-
-// SetAdditionalHints sets the additional hints for the odps client
-func (c *odpsClient) SetAdditionalHints(hints map[string]string) {
-	c.additionalHints = hints
 }
 
 // SetLogViewRetentionInDays sets the log view retention in days
@@ -216,4 +212,15 @@ func retry(l *slog.Logger, retryMax int, retryBackoffMs int64, f func() error) e
 	}
 
 	return err
+}
+
+func getHintsString(hints map[string]string) string {
+	if hints == nil {
+		return ""
+	}
+	var hintsStr []string
+	for k, v := range hints {
+		hintsStr = append(hintsStr, fmt.Sprintf("%s: %s", k, v))
+	}
+	return strings.Join(hintsStr, ", ")
 }
