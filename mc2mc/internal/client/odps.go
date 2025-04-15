@@ -17,7 +17,6 @@ type odpsClient struct {
 	client *odps.Odps
 
 	logViewRetentionInDays int
-	additionalHints        map[string]string
 	isDryRun               bool
 }
 
@@ -33,21 +32,18 @@ func NewODPSClient(logger *slog.Logger, client *odps.Odps) *odpsClient {
 // ExecSQL executes the given query in syncronous mode (blocking)
 // with capability to do graceful shutdown by terminating task instance
 // when context is cancelled.
-func (c *odpsClient) ExecSQL(ctx context.Context, query string, queryHints ...map[string]string) error {
+func (c *odpsClient) ExecSQL(ctx context.Context, query string, additionalHints map[string]string) error {
 	if c.isDryRun {
 		c.logger.Info("dry run mode, skipping execution")
 		return nil
 	}
 
-	hints := addHints(c.additionalHints, query)
-
 	// add job-specific hints, which takes priority over the global hints
-	logHints := []string{}
-	if len(queryHints) > 0 {
-		for k, v := range queryHints[0] {
-			hints[k] = v
-			logHints = append(logHints, fmt.Sprintf("%s: %s", k, v))
-		}
+	hints := addHints(additionalHints, query)
+
+	logHints := make([]string, 0)
+	for k, v := range hints {
+		logHints = append(logHints, fmt.Sprintf("%s: %s", k, v))
 	}
 
 	taskIns, err := c.client.ExecSQlWithHints(query, hints)
@@ -72,11 +68,6 @@ func (c *odpsClient) ExecSQL(ctx context.Context, query string, queryHints ...ma
 	case err := <-c.wait(taskIns):
 		return errors.WithStack(err)
 	}
-}
-
-// SetAdditionalHints sets the additional hints for the odps client
-func (c *odpsClient) SetAdditionalHints(hints map[string]string) {
-	c.additionalHints = hints
 }
 
 // SetLogViewRetentionInDays sets the log view retention in days

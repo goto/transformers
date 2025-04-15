@@ -44,7 +44,6 @@ func mc2mc(envs []string) error {
 		client.SetupODPSClient(cfg.GenOdps()),
 		client.SetupDefaultProject(cfg.ExecutionProject),
 		client.SetUpLogViewRetentionInDays(cfg.LogViewRetentionInDays),
-		client.SetupAdditionalHints(cfg.AdditionalHints),
 		client.SetupDryRun(cfg.DryRun),
 	)
 	if err != nil {
@@ -162,13 +161,13 @@ func mc2mc(envs []string) error {
 
 	// only support concurrent execution for REPLACE method
 	if cfg.LoadMethod == "REPLACE" {
-		return executeConcurrently(ctx, c, cfg.Concurrency, queriesToExecute)
+		return executeConcurrently(ctx, c, cfg.Concurrency, queriesToExecute, cfg.AdditionalHints)
 	}
 	// otherwise execute sequentially
-	return execute(ctx, c, queriesToExecute)
+	return execute(ctx, c, queriesToExecute, cfg.AdditionalHints)
 }
 
-func executeConcurrently(ctx context.Context, c *client.Client, concurrency int, queriesToExecute []string) error {
+func executeConcurrently(ctx context.Context, c *client.Client, concurrency int, queriesToExecute []string, additionalHints map[string]string) error {
 	// execute query concurrently
 	sem := make(chan uint8, concurrency)
 	wg := sync.WaitGroup{}
@@ -177,9 +176,9 @@ func executeConcurrently(ctx context.Context, c *client.Client, concurrency int,
 
 	for i, queryToExecute := range queriesToExecute {
 		sem <- 0
-		executeFn := c.ExecuteFnWithQueryID(i + 1)
+		executeFn := c.ExecuteFn(i + 1)
 		go func(queryToExecute string, errChan chan error) {
-			err := executeFn(ctx, queryToExecute)
+			err := executeFn(ctx, queryToExecute, additionalHints)
 			if err != nil {
 				errChan <- errors.WithStack(err)
 			}
@@ -201,10 +200,10 @@ func executeConcurrently(ctx context.Context, c *client.Client, concurrency int,
 	return errs
 }
 
-func execute(ctx context.Context, c *client.Client, queriesToExecute []string) error {
+func execute(ctx context.Context, c *client.Client, queriesToExecute []string, additionalHints map[string]string) error {
 	for i, queryToExecute := range queriesToExecute {
-		executeFn := c.ExecuteFnWithQueryID(i + 1)
-		err := executeFn(ctx, queryToExecute)
+		executeFn := c.ExecuteFn(i + 1)
+		err := executeFn(ctx, queryToExecute, additionalHints)
 		if err != nil {
 			return errors.WithStack(err)
 		}

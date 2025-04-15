@@ -14,10 +14,9 @@ const (
 )
 
 type OdpsClient interface {
-	ExecSQL(ctx context.Context, query string, hints ...map[string]string) error
+	ExecSQL(ctx context.Context, query string, hints map[string]string) error
 	SetDefaultProject(project string)
 	SetLogViewRetentionInDays(days int)
-	SetAdditionalHints(hints map[string]string)
 	SetDryRun(dryRun bool)
 }
 
@@ -51,14 +50,16 @@ func (c *Client) Close() error {
 	return errors.WithStack(err)
 }
 
-func (c *Client) ExecuteFnWithQueryID(id int) func(context.Context, string) error {
-	additionalHints := map[string]string{
-		SqlScriptSequenceHint: fmt.Sprintf("%d", id),
-	}
-
-	return func(ctx context.Context, query string) error {
+func (c *Client) ExecuteFn(id int) func(context.Context, string, map[string]string) error {
+	return func(ctx context.Context, query string, additionalHints map[string]string) error {
 		// execute query with odps client
 		c.logger.Info(fmt.Sprintf("[sequence: %d] query to execute:\n%s", id, query))
+		// Merge additionalHints with the id
+		if additionalHints == nil {
+			additionalHints = make(map[string]string)
+		}
+		additionalHints[SqlScriptSequenceHint] = fmt.Sprintf("%d", id)
+
 		if err := c.OdpsClient.ExecSQL(ctx, query, additionalHints); err != nil {
 			return errors.WithStack(err)
 		}
