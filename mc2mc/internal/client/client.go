@@ -10,7 +10,7 @@ import (
 )
 
 type OdpsClient interface {
-	ExecSQL(ctx context.Context, query string) error
+	ExecSQL(ctx context.Context, query string, hints ...map[string]string) error
 	SetDefaultProject(project string)
 	SetLogViewRetentionInDays(days int)
 	SetAdditionalHints(hints map[string]string)
@@ -47,13 +47,20 @@ func (c *Client) Close() error {
 	return errors.WithStack(err)
 }
 
-func (c *Client) Execute(ctx context.Context, query string) error {
-	// execute query with odps client
-	c.logger.Info(fmt.Sprintf("query to execute:\n%s", query))
-	if err := c.OdpsClient.ExecSQL(ctx, query); err != nil {
-		return errors.WithStack(err)
+func (c *Client) ExecuteFnWithQueryID(id int) func(context.Context, string) error {
+	idStr := fmt.Sprintf("%d", id)
+	additionalHints := map[string]string{
+		"goto.sql.script.sequence": idStr,
 	}
 
-	c.logger.Info("execution done")
-	return nil
+	return func(ctx context.Context, query string) error {
+		// execute query with odps client
+		c.logger.Info(fmt.Sprintf("query to execute:\n%s", query))
+		if err := c.OdpsClient.ExecSQL(ctx, query, additionalHints); err != nil {
+			return errors.WithStack(err)
+		}
+
+		c.logger.Info(fmt.Sprintf("execution done for id: %d", id))
+		return nil
+	}
 }

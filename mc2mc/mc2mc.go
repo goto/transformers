@@ -175,10 +175,11 @@ func executeConcurrently(ctx context.Context, c *client.Client, concurrency int,
 	wg.Add(len(queriesToExecute))
 	errChan := make(chan error, len(queriesToExecute))
 
-	for _, queryToExecute := range queriesToExecute {
+	for i, queryToExecute := range queriesToExecute {
 		sem <- 0
+		executeFn := c.ExecuteFnWithQueryID(i + 1)
 		go func(queryToExecute string, errChan chan error) {
-			err := c.Execute(ctx, queryToExecute)
+			err := executeFn(ctx, queryToExecute)
 			if err != nil {
 				errChan <- errors.WithStack(err)
 			}
@@ -201,8 +202,9 @@ func executeConcurrently(ctx context.Context, c *client.Client, concurrency int,
 }
 
 func execute(ctx context.Context, c *client.Client, queriesToExecute []string) error {
-	for _, queryToExecute := range queriesToExecute {
-		err := c.Execute(ctx, queryToExecute)
+	for i, queryToExecute := range queriesToExecute {
+		executeFn := c.ExecuteFnWithQueryID(i + 1)
+		err := executeFn(ctx, queryToExecute)
 		if err != nil {
 			return errors.WithStack(err)
 		}
