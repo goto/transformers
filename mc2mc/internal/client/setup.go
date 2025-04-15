@@ -10,6 +10,16 @@ import (
 
 type SetupFn func(c *Client) error
 
+func SetupDryRun(dryRun bool) SetupFn {
+	return func(c *Client) error {
+		if c.OdpsClient == nil {
+			return errors.New("odps client is required")
+		}
+		c.OdpsClient.SetDryRun(dryRun)
+		return nil
+	}
+}
+
 func SetupAdditionalHints(hints map[string]string) SetupFn {
 	return func(c *Client) error {
 		if c.OdpsClient == nil {

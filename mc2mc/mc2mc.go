@@ -45,6 +45,7 @@ func mc2mc(envs []string) error {
 		client.SetupDefaultProject(cfg.ExecutionProject),
 		client.SetUpLogViewRetentionInDays(cfg.LogViewRetentionInDays),
 		client.SetupAdditionalHints(cfg.AdditionalHints),
+		client.SetupDryRun(cfg.DryRun),
 	)
 	if err != nil {
 		return errors.WithStack(err)

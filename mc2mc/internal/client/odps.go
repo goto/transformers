@@ -18,6 +18,7 @@ type odpsClient struct {
 
 	logViewRetentionInDays int
 	additionalHints        map[string]string
+	isDryRun               bool
 }
 
 // NewODPSClient creates a new odpsClient instance
@@ -33,6 +34,10 @@ func NewODPSClient(logger *slog.Logger, client *odps.Odps) *odpsClient {
 // with capability to do graceful shutdown by terminating task instance
 // when context is cancelled.
 func (c *odpsClient) ExecSQL(ctx context.Context, query string) error {
+	if c.isDryRun {
+		c.logger.Info("dry run mode, skipping execution")
+		return nil
+	}
 	hints := addHints(c.additionalHints, query)
 	taskIns, err := c.client.ExecSQlWithHints(query, hints)
 	if err != nil {
@@ -66,6 +71,11 @@ func (c *odpsClient) SetAdditionalHints(hints map[string]string) {
 // SetLogViewRetentionInDays sets the log view retention in days
 func (c *odpsClient) SetLogViewRetentionInDays(days int) {
 	c.logViewRetentionInDays = days
+}
+
+// SetDryRun sets the dry run mode of the odps client
+func (c *odpsClient) SetDryRun(dryRun bool) {
+	c.isDryRun = dryRun
 }
 
 // SetDefaultProject sets the default project of the odps client

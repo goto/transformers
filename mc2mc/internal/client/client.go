@@ -14,6 +14,7 @@ type OdpsClient interface {
 	SetDefaultProject(project string)
 	SetLogViewRetentionInDays(days int)
 	SetAdditionalHints(hints map[string]string)
+	SetDryRun(dryRun bool)
 }
 
 type Client struct {
