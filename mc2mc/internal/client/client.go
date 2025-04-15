@@ -9,6 +9,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	SqlScriptSequenceHint = "goto.sql.script.sequence"
+)
+
 type OdpsClient interface {
 	ExecSQL(ctx context.Context, query string, hints ...map[string]string) error
 	SetDefaultProject(project string)
@@ -48,19 +52,18 @@ func (c *Client) Close() error {
 }
 
 func (c *Client) ExecuteFnWithQueryID(id int) func(context.Context, string) error {
-	idStr := fmt.Sprintf("%d", id)
 	additionalHints := map[string]string{
-		"goto.sql.script.sequence": idStr,
+		SqlScriptSequenceHint: fmt.Sprintf("%d", id),
 	}
 
 	return func(ctx context.Context, query string) error {
 		// execute query with odps client
-		c.logger.Info(fmt.Sprintf("query to execute:\n%s", query))
+		c.logger.Info(fmt.Sprintf("[sequence: %d] query to execute:\n%s", id, query))
 		if err := c.OdpsClient.ExecSQL(ctx, query, additionalHints); err != nil {
 			return errors.WithStack(err)
 		}
 
-		c.logger.Info(fmt.Sprintf("execution done for id: %d", id))
+		c.logger.Info(fmt.Sprintf("[sequence: %d] execution done", id))
 		return nil
 	}
 }

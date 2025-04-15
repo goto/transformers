@@ -42,9 +42,11 @@ func (c *odpsClient) ExecSQL(ctx context.Context, query string, queryHints ...ma
 	hints := addHints(c.additionalHints, query)
 
 	// add job-specific hints, which takes priority over the global hints
+	logHints := []string{}
 	if len(queryHints) > 0 {
 		for k, v := range queryHints[0] {
 			hints[k] = v
+			logHints = append(logHints, fmt.Sprintf("%s: %s", k, v))
 		}
 	}
 
@@ -59,7 +61,7 @@ func (c *odpsClient) ExecSQL(ctx context.Context, query string, queryHints ...ma
 		err = e.Join(err, taskIns.Terminate())
 		return errors.WithStack(err)
 	}
-	c.logger.Info(fmt.Sprintf("taskId: %s, log view: %s", taskIns.Id(), url))
+	c.logger.Info(fmt.Sprintf("taskId: %s, log view: %s, hints: (%s)", taskIns.Id(), url, strings.Join(logHints, ", ")))
 
 	// wait execution success
 	select {
