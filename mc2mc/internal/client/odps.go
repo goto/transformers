@@ -51,7 +51,7 @@ func (c *odpsClient) ExecSQL(ctx context.Context, query string, additionalHints 
 		err = e.Join(err, taskIns.Terminate())
 		return errors.WithStack(err)
 	}
-	c.logger.Info(fmt.Sprintf("taskId: %s, log view: %s, hints: (%s)", taskIns.Id(), url, getHintsString(hints)))
+	c.logger.Info(fmt.Sprintf("taskId: %s, log view: %s , hints: (%s)", taskIns.Id(), url, getHintsString(hints)))
 
 	// wait execution success
 	select {
@@ -118,6 +118,7 @@ func (c *odpsClient) wait(taskIns *odps.Instance) <-chan error {
 		defer close(errChan)
 		err := c.retry(taskIns.WaitForSuccess)
 		if err != nil {
+			err := errors.Wrap(err, fmt.Sprintf("task instance %s failed", taskIns.Id()))
 			errChan <- errors.WithStack(err)
 		}
 		c.logger.Info(fmt.Sprintf("task instance %s finished with status: %s", taskIns.Id(), taskIns.Status()))
