@@ -118,6 +118,7 @@ func (c *odpsClient) wait(taskIns *odps.Instance) <-chan error {
 		defer close(errChan)
 		err := c.retry(taskIns.WaitForSuccess)
 		if err != nil {
+			err := errors.Wrap(err, fmt.Sprintf("task instance %s failed", taskIns.Id()))
 			errChan <- errors.WithStack(err)
 		}
 		c.logger.Info(fmt.Sprintf("task instance %s finished with status: %s", taskIns.Id(), taskIns.Status()))
