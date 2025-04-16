@@ -51,7 +51,7 @@ func (c *odpsClient) ExecSQL(ctx context.Context, query string, additionalHints 
 		err = e.Join(err, taskIns.Terminate())
 		return errors.WithStack(err)
 	}
-	c.logger.Info(fmt.Sprintf("taskId: %s, log view: %s, hints: (%s)", taskIns.Id(), url, getHintsString(hints)))
+	c.logger.Info(fmt.Sprintf("taskId: %s, log view: %s , hints: (%s)", taskIns.Id(), url, getHintsString(hints)))
 
 	// wait execution success
 	select {
