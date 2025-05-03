@@ -5,6 +5,7 @@ import (
 	e "errors"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"strings"
 	"time"
 
@@ -46,7 +47,7 @@ func (c *odpsClient) ExecSQL(ctx context.Context, query string, additionalHints 
 	}
 
 	// generate log view
-	url, err := odps.NewLogView(c.client).GenerateLogView(taskIns, c.logViewRetentionInDays*24)
+	url, err := c.generateLogView(taskIns)
 	if err != nil {
 		err = e.Join(err, taskIns.Terminate())
 		return errors.WithStack(err)
@@ -107,6 +108,28 @@ func (c *odpsClient) GetOrderedColumns(tableID string) ([]string, error) {
 	}
 
 	return columnNames, nil
+}
+
+// generateLogView generates the log view for the given task instance
+func (c *odpsClient) generateLogView(taskIns *odps.Instance) (string, error) {
+	u, err := c.client.LogView().GenerateLogView(taskIns, c.logViewRetentionInDays*24)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+
+	// change query parameter h to http://service.id-all.maxcompute.aliyun-inc.com
+	parsedURL, err := url.Parse(u)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+	q := parsedURL.Query()
+	q.Set("h", "http://service.id-all.maxcompute.aliyun-inc.com/api")
+
+	// reconstruct the URL with the new query parameter
+	parsedURL.RawQuery = q.Encode()
+	u = parsedURL.String()
+
+	return u, nil
 }
 
 // wait waits for the task instance to finish on a separate goroutine
