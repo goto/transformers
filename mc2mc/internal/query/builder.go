@@ -200,7 +200,7 @@ func (b *Builder) constructMergeQuery(hrs, vars, queries []string) string {
 		if headers != "" {
 			builder.WriteString(fmt.Sprintf("%s\n", headers))
 		}
-		if variables != "" {
+		if variables != "" && !IsDDL(q) { // skip variables if it's ddl
 			builder.WriteString(fmt.Sprintf("%s\n", variables))
 		}
 		builder.WriteString(fmt.Sprintf("%s\n;", q))

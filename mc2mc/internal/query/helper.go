@@ -11,15 +11,15 @@ const (
 )
 
 var (
-	semicolonPattern    = regexp.MustCompile(`;\s*(\n+|$)`)      // regex to match semicolons
-	commentPattern      = regexp.MustCompile(`--[^\n]*`)         // regex to match comments
-	multiCommentPattern = regexp.MustCompile(`(?s)/\*.*?\*/`)    // regex to match multi-line comments
-	headerPattern       = regexp.MustCompile(`(?i)^set`)         // regex to match header statements
-	variablePattern     = regexp.MustCompile(`(?i)^@`)           // regex to match variable statements
-	dropPattern         = regexp.MustCompile(`(?i)^DROP\s+`)     // regex to match DROP statements
-	udfPattern          = regexp.MustCompile(`(?i)^function\s+`) // regex to match UDF statements
-	ddlPattern          = regexp.MustCompile(`(?i)^CREATE\s+`)   // regex to match DDL statements
-	stringPattern       = regexp.MustCompile(`'[^']*'`)          // regex to match SQL strings (anything inside single quotes)
+	semicolonPattern    = regexp.MustCompile(`;\s*(\n+|$)`)                          // regex to match semicolons
+	commentPattern      = regexp.MustCompile(`--[^\n]*`)                             // regex to match comments
+	multiCommentPattern = regexp.MustCompile(`(?s)/\*.*?\*/`)                        // regex to match multi-line comments
+	headerPattern       = regexp.MustCompile(`(?i)^set`)                             // regex to match header statements
+	variablePattern     = regexp.MustCompile(`(?i)^@`)                               // regex to match variable statements
+	dropPattern         = regexp.MustCompile(`(?i)^DROP\s+`)                         // regex to match DROP statements
+	udfPattern          = regexp.MustCompile(`(?i)^function\s+`)                     // regex to match UDF statements
+	ddlPattern          = regexp.MustCompile(`(?i)^(CREATE|ALTER|DROP|TRUNCATE)\s+`) // regex to match DDL statements
+	stringPattern       = regexp.MustCompile(`'[^']*'`)                              // regex to match SQL strings (anything inside single quotes)
 )
 
 func SplitQueryComponents(query string) (headers []string, varsUDFs []string, queries []string) {
@@ -227,6 +227,7 @@ func RestoreStringLiteral(query string, placeholders map[string]string) string {
 	return query
 }
 
-func IsDDL(query string) bool {
-	return ddlPattern.MatchString(query)
+func IsDDL(stmt string) bool {
+	stmtWithoutComment := RemoveComments(stmt)
+	return ddlPattern.MatchString(strings.TrimSpace(stmtWithoutComment))
 }

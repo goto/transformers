@@ -475,7 +475,7 @@ SET append_test.id = 2;`
 DROP TABLE IF EXISTS append_tmp;
 @src := SELECT 1 id;
 
-CREATE TABLE append_tmp AS SELECT * FROM @src;
+CREATE TABLE append_tmp AS SELECT * FROM sample_table;
 
 MERGE INTO append_test
 USING (SELECT * FROM @src) source
@@ -498,9 +498,7 @@ DROP TABLE IF EXISTS append_tmp
 --*--optimus-break-marker--*--
 SET odps.table.append2.enable=true
 ;
-@src := SELECT 1 id
-;
-CREATE TABLE append_tmp AS SELECT * FROM @src
+CREATE TABLE append_tmp AS SELECT * FROM sample_table
 ;
 --*--optimus-break-marker--*--
 SET odps.table.append2.enable=true
@@ -726,7 +724,7 @@ SET append_test.id = 2
 DROP TABLE IF EXISTS append_tmp;
 @src := SELECT 1 id;
 
-CREATE TABLE append_tmp AS SELECT * FROM @src;
+CREATE TABLE append_tmp AS SELECT * FROM sample_table;
 
 @src2 := SELECT id FROM append_tmp;
 
@@ -750,9 +748,51 @@ DROP TABLE IF EXISTS append_tmp
 --*--optimus-break-marker--*--
 SET odps.table.append2.enable=true
 ;
+CREATE TABLE append_tmp AS SELECT * FROM sample_table
+;
+--*--optimus-break-marker--*--
+SET odps.table.append2.enable=true
+;
 @src := SELECT 1 id
 ;
-CREATE TABLE append_tmp AS SELECT * FROM @src
+@src2 := SELECT id FROM append_tmp
+;
+MERGE INTO append_test
+USING (SELECT * FROM @src2) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 2
+;`, query)
+	})
+	t.Run("returns query for merge load method with correct ddl ordering", func(t *testing.T) {
+		queryToExecute := `SET odps.table.append2.enable=true;
+@src := SELECT 1 id;
+@src2 := SELECT id FROM append_tmp;
+DROP TABLE IF EXISTS append_tmp;
+
+CREATE TABLE append_tmp AS SELECT * FROM sample_table;
+
+MERGE INTO append_test
+USING (SELECT * FROM @src2) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 2;`
+		odspClient := &mockOdpsClient{}
+		query, err := query.NewBuilder(
+			logger.NewDefaultLogger(),
+			odspClient,
+			query.WithQuery(queryToExecute),
+			query.WithMethod(query.MERGE),
+		).Build()
+		assert.NoError(t, err)
+		assert.Equal(t, `SET odps.table.append2.enable=true
+;
+DROP TABLE IF EXISTS append_tmp
+;
+--*--optimus-break-marker--*--
+SET odps.table.append2.enable=true
+;
+CREATE TABLE append_tmp AS SELECT * FROM sample_table
 ;
 --*--optimus-break-marker--*--
 SET odps.table.append2.enable=true
