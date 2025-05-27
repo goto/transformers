@@ -20,6 +20,8 @@ var (
 	udfPattern          = regexp.MustCompile(`(?i)^function\s+`)                     // regex to match UDF statements
 	ddlPattern          = regexp.MustCompile(`(?i)^(CREATE|ALTER|DROP|TRUNCATE)\s+`) // regex to match DDL statements
 	stringPattern       = regexp.MustCompile(`'[^']*'`)                              // regex to match SQL strings (anything inside single quotes)
+	// special case for DML CREATE TABLE statements
+	dmlCreatePattern = regexp.MustCompile(`(?i)^CREATE\s+TABLE\s+(IF\s+NOT\s+EXISTS\s+)?[^\s]+\s+(LIFECYCLE\s+\d+\s+)?AS\s+`) // regex to match DML CREATE TABLE statements
 )
 
 func SplitQueryComponents(query string) (headers []string, varsUDFs []string, queries []string) {
@@ -229,5 +231,5 @@ func RestoreStringLiteral(query string, placeholders map[string]string) string {
 
 func IsDDL(stmt string) bool {
 	stmtWithoutComment := RemoveComments(stmt)
-	return ddlPattern.MatchString(strings.TrimSpace(stmtWithoutComment))
+	return ddlPattern.MatchString(strings.TrimSpace(stmtWithoutComment)) && !dmlCreatePattern.MatchString(strings.TrimSpace(stmtWithoutComment))
 }

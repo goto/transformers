@@ -475,7 +475,7 @@ SET append_test.id = 2;`
 DROP TABLE IF EXISTS append_tmp;
 @src := SELECT 1 id;
 
-CREATE TABLE append_tmp AS SELECT * FROM sample_table;
+CREATE TABLE append_tmp AS SELECT * FROM @src;
 
 MERGE INTO append_test
 USING (SELECT * FROM @src) source
@@ -498,7 +498,9 @@ DROP TABLE IF EXISTS append_tmp
 --*--optimus-break-marker--*--
 SET odps.table.append2.enable=true
 ;
-CREATE TABLE append_tmp AS SELECT * FROM sample_table
+@src := SELECT 1 id
+;
+CREATE TABLE append_tmp AS SELECT * FROM @src
 ;
 --*--optimus-break-marker--*--
 SET odps.table.append2.enable=true
@@ -724,7 +726,7 @@ SET append_test.id = 2
 DROP TABLE IF EXISTS append_tmp;
 @src := SELECT 1 id;
 
-CREATE TABLE append_tmp AS SELECT * FROM sample_table;
+CREATE TABLE append_tmp AS SELECT * FROM @src;
 
 @src2 := SELECT id FROM append_tmp;
 
@@ -748,7 +750,9 @@ DROP TABLE IF EXISTS append_tmp
 --*--optimus-break-marker--*--
 SET odps.table.append2.enable=true
 ;
-CREATE TABLE append_tmp AS SELECT * FROM sample_table
+@src := SELECT 1 id
+;
+CREATE TABLE append_tmp AS SELECT * FROM @src
 ;
 --*--optimus-break-marker--*--
 SET odps.table.append2.enable=true
@@ -767,10 +771,13 @@ SET append_test.id = 2
 	t.Run("returns query for merge load method with correct ddl ordering", func(t *testing.T) {
 		queryToExecute := `SET odps.table.append2.enable=true;
 @src := SELECT 1 id;
+
 @src2 := SELECT id FROM append_tmp;
 DROP TABLE IF EXISTS append_tmp;
 
-CREATE TABLE append_tmp AS SELECT * FROM sample_table;
+CREATE TABLE append_tmp AS SELECT * FROM @src;
+
+CREATE TABLE append_tmp2(id bigint);
 
 MERGE INTO append_test
 USING (SELECT * FROM @src2) source
@@ -792,7 +799,16 @@ DROP TABLE IF EXISTS append_tmp
 --*--optimus-break-marker--*--
 SET odps.table.append2.enable=true
 ;
-CREATE TABLE append_tmp AS SELECT * FROM sample_table
+@src := SELECT 1 id
+;
+@src2 := SELECT id FROM append_tmp
+;
+CREATE TABLE append_tmp AS SELECT * FROM @src
+;
+--*--optimus-break-marker--*--
+SET odps.table.append2.enable=true
+;
+CREATE TABLE append_tmp2(id bigint)
 ;
 --*--optimus-break-marker--*--
 SET odps.table.append2.enable=true
