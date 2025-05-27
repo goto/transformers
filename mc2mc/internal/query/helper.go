@@ -21,7 +21,7 @@ var (
 	ddlPattern          = regexp.MustCompile(`(?i)^(CREATE|ALTER|DROP|TRUNCATE)\s+`) // regex to match DDL statements
 	stringPattern       = regexp.MustCompile(`'[^']*'`)                              // regex to match SQL strings (anything inside single quotes)
 	// special case for DML CREATE TABLE statements
-	dmlCreatePattern = regexp.MustCompile(`(?i)^CREATE\s+TABLE\s+(IF\s+NOT\s+EXISTS\s+)?[^\s]+\s+(LIFECYCLE\s+\d+\s+)?AS\s+`) // regex to match DML CREATE TABLE statements
+	dmlCreatePattern = regexp.MustCompile(`(?i)^CREATE\s+TABLE\s+(IF\s+NOT\s+EXISTS\s+)?[^\s]+\s+(TBLPROPERTIES\s*\([^\)]+\)\s+)?(LIFECYCLE\s+\d+\s+)?AS\s+`) // regex to match DML CREATE TABLE statements
 )
 
 func SplitQueryComponents(query string) (headers []string, varsUDFs []string, queries []string) {
