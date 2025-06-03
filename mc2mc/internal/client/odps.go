@@ -21,6 +21,48 @@ type odpsClient struct {
 	isDryRun               bool
 }
 
+var (
+	// reserved keywords https://www.alibabacloud.com/help/en/maxcompute/user-guide/reserved-words-and-keywords
+	reservedKeywords = []string{
+		"add", "after", "all", "alter", "analyze", "and", "archive", "array", "as", "asc",
+		"before", "between", "bigint", "binary", "blob", "boolean", "both", "decimal",
+		"bucket", "buckets", "by", "cascade", "case", "cast", "cfile", "change", "cluster",
+		"clustered", "clusterstatus", "collection", "column", "columns", "comment", "compute",
+		"concatenate", "continue", "create", "cross", "current", "cursor", "data", "database",
+		"databases", "date", "datetime", "dbproperties", "deferred", "delete", "delimited",
+		"desc", "describe", "directory", "disable", "distinct", "distribute", "double", "drop",
+		"else", "enable", "end", "except", "escaped", "exclusive", "exists", "explain", "export",
+		"extended", "external", "false", "fetch", "fields", "fileformat", "first", "float",
+		"following", "format", "formatted", "from", "full", "function", "functions", "grant",
+		"group", "having", "hold_ddltime", "idxproperties", "if", "import", "in", "index",
+		"indexes", "inpath", "inputdriver", "inputformat", "insert", "int", "intersect", "into",
+		"is", "items", "join", "keys", "lateral", "left", "lifecycle", "like", "limit", "lines",
+		"load", "local", "location", "lock", "locks", "long", "map", "mapjoin", "materialized",
+		"minus", "msck", "not", "no_drop", "null", "of", "offline", "offset", "on", "option",
+		"or", "order", "out", "outer", "outputdriver", "outputformat", "over", "overwrite",
+		"partition", "partitioned", "partitionproperties", "partitions", "percent", "plus",
+		"preceding", "preserve", "procedure", "purge", "range", "rcfile", "read", "readonly",
+		"reads", "rebuild", "recordreader", "recordwriter", "reduce", "regexp", "rename",
+		"repair", "replace", "restrict", "revoke", "right", "rlike", "row", "rows", "schema",
+		"schemas", "select", "semi", "sequencefile", "serde", "serdeproperties", "set", "shared",
+		"show", "show_database", "smallint", "sort", "sorted", "ssl", "statistics", "status",
+		"stored", "streamtable", "string", "struct", "table", "tables", "tablesample",
+		"tblproperties", "temporary", "terminated", "textfile", "then", "timestamp", "tinyint",
+		"to", "touch", "transform", "trigger", "true", "type", "unarchive", "unbounded", "undo",
+		"union", "uniontype", "uniquejoin", "unlock", "unsigned", "update", "use", "using",
+		"utc", "utc_timestamp", "view", "when", "where", "while", "div",
+	}
+
+	reservedKeywordsMap map[string]bool
+)
+
+func init() {
+	reservedKeywordsMap = make(map[string]bool, len(reservedKeywords))
+	for _, keyword := range reservedKeywords {
+		reservedKeywordsMap[keyword] = true
+	}
+}
+
 // NewODPSClient creates a new odpsClient instance
 func NewODPSClient(logger *slog.Logger, client *odps.Odps) *odpsClient {
 	return &odpsClient{
@@ -95,6 +137,15 @@ func (c *odpsClient) GetPartitionNames(_ context.Context, tableID string) ([]str
 	return partitionNames, nil
 }
 
+func sanitizeColumnName(columnName string) string {
+	// if column name is a reserved keyword, add backticks around it
+	if _, ok := reservedKeywordsMap[strings.ToLower(columnName)]; ok {
+		return fmt.Sprintf("`%s`", columnName)
+	}
+
+	return columnName
+}
+
 // GetOrderedColumns returns the ordered column names of the given table
 // by querying the table schema.
 func (c *odpsClient) GetOrderedColumns(tableID string) ([]string, error) {
@@ -104,7 +155,7 @@ func (c *odpsClient) GetOrderedColumns(tableID string) ([]string, error) {
 	}
 	var columnNames []string
 	for _, column := range table.Schema().Columns {
-		columnNames = append(columnNames, column.Name)
+		columnNames = append(columnNames, sanitizeColumnName(column.Name))
 	}
 
 	return columnNames, nil
