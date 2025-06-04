@@ -104,7 +104,7 @@ func (c *odpsClient) GetOrderedColumns(tableID string) ([]string, error) {
 	}
 	var columnNames []string
 	for _, column := range table.Schema().Columns {
-		columnNames = append(columnNames, column.Name)
+		columnNames = append(columnNames, sanitizeColumnName(column.Name))
 	}
 
 	return columnNames, nil
