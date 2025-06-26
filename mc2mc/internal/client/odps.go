@@ -180,12 +180,16 @@ func (c *odpsClient) terminate(instance *odps.Instance) error {
 
 func addHints(additionalHints map[string]string, query string) map[string]string {
 	hints := make(map[string]string)
-	for k, v := range additionalHints {
-		hints[k] = v
-	}
 	multisql := strings.Contains(query, ";")
 	if multisql {
 		hints["odps.sql.submit.mode"] = "script"
+	}
+	for k, v := range additionalHints {
+		if _, ok := hints[k]; ok && v == "" {
+			delete(hints, k) // remove empty hints
+			continue
+		}
+		hints[k] = v
 	}
 
 	return hints
