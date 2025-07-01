@@ -139,6 +139,7 @@ func (c *odpsClient) wait(taskIns *odps.Instance) <-chan error {
 	c.logger.Info(fmt.Sprintf("waiting for task instance %s to finish...", taskIns.Id()))
 	go func(errChan chan<- error) {
 		defer close(errChan)
+		time.Sleep(1 * time.Minute) // simulate delay
 		err := c.retry(taskIns.WaitForSuccess)
 		if err != nil {
 			err := errors.Wrap(err, fmt.Sprintf("task instance %s failed", taskIns.Id()))
@@ -161,6 +162,7 @@ func (c *odpsClient) retry(f func() error) error {
 }
 
 func (c *odpsClient) terminate(instance *odps.Instance) error {
+	c.logger.Info("try to terminate instance")
 	if instance == nil {
 		return nil
 	}
