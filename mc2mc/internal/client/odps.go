@@ -57,9 +57,12 @@ func (c *odpsClient) ExecSQL(ctx context.Context, query string, additionalHints 
 	// wait execution success
 	select {
 	case <-ctx.Done():
-		c.logger.Info("context cancelled, terminating task instance")
-		err := c.terminate(taskIns)
-		return e.Join(ctx.Err(), err)
+		msg := "context canceled"
+		if err := context.Cause(ctx); err != nil {
+			msg = fmt.Sprintf("%s: %s", msg, err.Error())
+		}
+		c.logger.Info(msg)
+		return errors.WithStack(c.terminate(taskIns))
 	case err := <-c.wait(taskIns):
 		return errors.WithStack(err)
 	}
