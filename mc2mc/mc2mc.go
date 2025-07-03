@@ -33,7 +33,7 @@ func mc2mc(envs []string) error {
 	}
 
 	// graceful shutdown
-	ctx, cancelFn := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	ctx, cancelFn := signalAwareContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancelFn()
 
 	// initiate client
@@ -209,4 +209,27 @@ func execute(ctx context.Context, c *client.Client, queriesToExecute []string, a
 		}
 	}
 	return nil
+}
+
+// signalAwareContext creates a context that is aware of signals.
+func signalAwareContext(parent context.Context, signals ...os.Signal) (context.Context, context.CancelFunc) {
+	ctx, cancelWithCause := context.WithCancelCause(parent)
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, signals...)
+
+	// start a goroutine to handle signals
+	go func() {
+		select {
+		case sig := <-sigCh:
+			cancelWithCause(fmt.Errorf("signal: %v", sig))
+			signal.Stop(sigCh)
+		case <-ctx.Done():
+			signal.Stop(sigCh)
+		}
+	}()
+
+	// return a standard CancelFunc that preserves the original behavior
+	return ctx, func() {
+		cancelWithCause(context.Canceled)
+	}
 }
