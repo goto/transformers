@@ -52,15 +52,16 @@ func (c *Client) Close() error {
 
 func (c *Client) ExecuteFn(id int) func(context.Context, string, map[string]string) error {
 	return func(ctx context.Context, query string, additionalHints map[string]string) error {
-		// execute query with odps client
 		c.logger.Info(fmt.Sprintf("[sequence: %d] query to execute:\n%s", id, query))
-		// Merge additionalHints with the id
-		if additionalHints == nil {
-			additionalHints = make(map[string]string)
+		// Create local copy of additionalHints with sequence hint
+		hints := make(map[string]string, len(additionalHints)+1)
+		for k, v := range additionalHints {
+			hints[k] = v
 		}
-		additionalHints[SqlScriptSequenceHint] = fmt.Sprintf("%d", id)
+		hints[SqlScriptSequenceHint] = fmt.Sprintf("%d", id)
 
-		if err := c.OdpsClient.ExecSQL(ctx, query, additionalHints); err != nil {
+		// execute query with odps client
+		if err := c.OdpsClient.ExecSQL(ctx, query, hints); err != nil {
 			return errors.WithStack(err)
 		}
 
