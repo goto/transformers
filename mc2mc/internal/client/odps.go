@@ -19,6 +19,7 @@ type odpsClient struct {
 
 	logViewRetentionInDays int
 	isDryRun               bool
+	retry                  func(f func() error) error
 }
 
 // NewODPSClient creates a new odpsClient instance
@@ -27,6 +28,9 @@ func NewODPSClient(logger *slog.Logger, client *odps.Odps) *odpsClient {
 		logger:                 logger,
 		client:                 client,
 		logViewRetentionInDays: 2,
+		retry: func(f func() error) error {
+			return retry(logger, 3, 1000, f)
+		},
 	}
 }
 
@@ -49,7 +53,7 @@ func (c *odpsClient) ExecSQL(ctx context.Context, query string, additionalHints 
 	// generate log view
 	url, err := c.generateLogView(taskIns)
 	if err != nil {
-		err = e.Join(err, taskIns.Terminate())
+		err = e.Join(err, c.terminate(taskIns))
 		return errors.WithStack(err)
 	}
 	c.logger.Info(fmt.Sprintf("taskId: %s, log view: %s , hints: (%s)", taskIns.Id(), url, getHintsString(hints)))
@@ -81,6 +85,13 @@ func (c *odpsClient) SetDryRun(dryRun bool) {
 // SetDefaultProject sets the default project of the odps client
 func (c *odpsClient) SetDefaultProject(project string) {
 	c.client.SetDefaultProjectName(project)
+}
+
+// SetRetry sets the retry configuration for the odps client
+func (c *odpsClient) SetRetry(max int, backoffMs int) {
+	c.retry = func(f func() error) error {
+		return retry(c.logger, max, int64(backoffMs), f)
+	}
 }
 
 // GetPartitionNames returns the partition names of the given table
@@ -156,11 +167,6 @@ func (c *odpsClient) wait(taskIns *odps.Instance) <-chan error {
 		}
 	}(errChan)
 	return errChan
-}
-
-// retry retries the given function with exponential backoff
-func (c *odpsClient) retry(f func() error) error {
-	return retry(c.logger, 3, 1000, f)
 }
 
 func (c *odpsClient) terminate(instance *odps.Instance) error {

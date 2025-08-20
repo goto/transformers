@@ -80,3 +80,10 @@ func SetupOTelSDK(collectorGRPCEndpoint string, otelAttributes string) SetupFn {
 		return nil
 	}
 }
+
+func SetupRetry(max int, backoffMs int) SetupFn {
+	return func(c *Client) error {
+		c.OdpsClient.SetRetry(max, backoffMs)
+		return nil
+	}
+}
