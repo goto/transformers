@@ -68,7 +68,12 @@ func (c *odpsClient) ExecSQL(ctx context.Context, query string, additionalHints 
 		c.logger.Info(msg)
 		return errors.WithStack(c.terminate(taskIns))
 	case err := <-c.wait(taskIns):
-		return errors.WithStack(err)
+		if err != nil {
+			c.logger.Error(fmt.Sprintf("task instance %s failed: %s", taskIns.Id(), err))
+			err = e.Join(err, c.terminate(taskIns)) // terminate task instance on failure
+			return errors.WithStack(err)
+		}
+		return nil
 	}
 }
 
@@ -157,6 +162,11 @@ func (c *odpsClient) wait(taskIns *odps.Instance) <-chan error {
 		if err != nil {
 			err := errors.Wrap(err, fmt.Sprintf("task instance %s failed", taskIns.Id()))
 			errChan <- errors.WithStack(err)
+			return
+		}
+		if err := taskIns.Load(); err != nil {
+			c.logger.Warn(fmt.Sprintf("failed to load task instance %s: %s", taskIns.Id(), err))
+			return
 		}
 		c.logger.Info(fmt.Sprintf("task instance %s finished with status: %s", taskIns.Id(), taskIns.Status()))
 		sum, err := taskIns.GetTaskSummary(taskIns.TaskNameCommitted())
