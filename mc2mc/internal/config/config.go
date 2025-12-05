@@ -16,6 +16,7 @@ type ConfigEnv struct {
 	LoadMethod                  string            `env:"LOAD_METHOD" envDefault:"APPEND"`
 	QueryFilePath               string            `env:"QUERY_FILE_PATH" envDefault:"/data/in/query.sql"`
 	DestinationTableID          string            `env:"DESTINATION_TABLE_ID"`
+	CostAttributionTeam         string            `env:"COST_ATTRIBUTION_TEAM"`
 	DStart                      string            `env:"DSTART"`
 	DEnd                        string            `env:"DEND"`
 	ExecutionProject            string            `env:"EXECUTION_PROJECT"`
