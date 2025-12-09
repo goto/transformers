@@ -26,6 +26,7 @@ type ConfigEnv struct {
 	DryRun                      bool              `env:"DRY_RUN" envDefault:"false"`
 	RetryMax                    int               `env:"RETRY_MAX" envDefault:"3"`
 	RetryBackoffMs              int               `env:"RETRY_BACKOFF_MS" envDefault:"1000"`
+	Priority                    int               `env:"PRIORITY" envDefault:"9"`
 	// TODO: delete this
 	DevEnablePartitionValue string `env:"DEV__ENABLE_PARTITION_VALUE" envDefault:"false"`
 	DevEnableAutoPartition  string `env:"DEV__ENABLE_AUTO_PARTITION" envDefault:"false"`
