@@ -145,6 +145,7 @@ func (c *odpsClient) execSQLWithHintsAndPriority(query string, hints map[string]
 	}
 	option := options.NewSQLTaskOptions()
 	option.Hints = hints
+	option.InstanceOption = options.NewCreateInstanceOptions()
 	option.InstanceOption.Priority = c.priority // add priority to instance option
 	taskIns, err := c.client.ExecSQlWithOption(query, option)
 	return taskIns, errors.WithStack(err)
