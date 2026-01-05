@@ -74,7 +74,7 @@ func (b *Builder) Build() (string, error) {
 			}
 			return b.query, nil
 		}
-		query := b.constructMergeQuery(hrs, vars, queries, b.costAttributionTeam)
+		query := b.constructMergeQuery(hrs, vars, queries)
 		return query, nil
 	}
 
@@ -200,7 +200,7 @@ func (b *Builder) constructOverridedValues(query string) (string, error) {
 }
 
 // constructMergeQueries constructs merge queries with headers and variables
-func (b *Builder) constructMergeQuery(hrs, vars, queries []string, costAttributionTeam string) string {
+func (b *Builder) constructMergeQuery(hrs, vars, queries []string) string {
 	builder := strings.Builder{}
 	for i, q := range queries {
 		q = strings.TrimSpace(q)
@@ -216,8 +216,8 @@ func (b *Builder) constructMergeQuery(hrs, vars, queries []string, costAttributi
 			builder.WriteString(fmt.Sprintf("%s\n", variables))
 		}
 		builder.WriteString(fmt.Sprintf("%s\n;", q))
-		if costAttributionTeam != "" {
-			builder.WriteString(fmt.Sprintf("\n%s\n", getCostAttributionComment(costAttributionTeam)))
+		if b.costAttributionTeam != "" {
+			builder.WriteString(fmt.Sprintf("\n%s\n", getCostAttributionComment(b.costAttributionTeam)))
 		}
 		if i < len(queries)-1 {
 			builder.WriteString(fmt.Sprintf("\n%s\n", BREAK_MARKER))
