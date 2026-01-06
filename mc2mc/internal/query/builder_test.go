@@ -196,6 +196,43 @@ select * from project.playground.table
 )
 ;`, queryToExecute)
 	})
+	t.Run("returns query for append load method with cost attribution", func(t *testing.T) {
+		queryToExecute := `select * from project.playground.table;`
+		odspClient := &mockOdpsClient{
+			orderedColumns: func() ([]string, error) {
+				return []string{"col1", "col2", "_partitiontime"}, nil
+			},
+			partitionResult: func() ([]string, error) {
+				return []string{}, nil
+			},
+		}
+		destinationTableID := "project.playground.table_destination"
+
+		queryToExecute, err := query.NewBuilder(
+			logger.NewDefaultLogger(),
+			odspClient,
+			query.WithQuery(queryToExecute),
+			query.WithMethod(query.APPEND),
+			query.WithDestination(destinationTableID),
+			query.WithOverridedValue("_partitiontime", "TIMESTAMP('2021-01-01')"),
+			query.WithAutoPartition(true),
+			query.WithPartitionValue(true),
+			query.WithCostAttributionLabel("costAttributionTeam"),
+			query.WithColumnOrder(),
+		).Build()
+
+		assert.NoError(t, err)
+		assert.Equal(t, `INSERT INTO TABLE project.playground.table_destination 
+SELECT col1, col2, _partitiontime FROM (
+SELECT col1, col2, TIMESTAMP('2021-01-01') as _partitiontime FROM (
+select * from project.playground.table
+)
+)
+;
+--cost_attribution_team=costAttributionTeam
+
+`, queryToExecute)
+	})
 	t.Run("returns query for append load method for partition table", func(t *testing.T) {
 		queryToExecute := `select * from project.playground.table;`
 		odspClient := &mockOdpsClient{
@@ -414,6 +451,47 @@ select * from project.playground.table
 )
 )
 ;`, queryToExecute)
+	})
+
+	t.Run("returns query for replace load method with query comment and cost attrinution label coment in the end", func(t *testing.T) {
+		queryToExecute := `select * from project.playground.table
+-- this is comment`
+		odspClient := &mockOdpsClient{
+			orderedColumns: func() ([]string, error) {
+				return []string{"col1", "col2", "_partitiontime"}, nil
+			},
+			partitionResult: func() ([]string, error) {
+				return []string{"col3"}, nil
+			},
+		}
+		destinationTableID := "project.playground.table_destination"
+
+		queryToExecute, err := query.NewBuilder(
+			logger.NewDefaultLogger(),
+			odspClient,
+			query.WithQuery(queryToExecute),
+			query.WithMethod(query.REPLACE),
+			query.WithDestination(destinationTableID),
+			query.WithOverridedValue("_partitiontime", "TIMESTAMP('2021-01-01')"),
+			query.WithOverridedValue("_partitiondate", "DATE(TIMESTAMP('2021-01-01'))"),
+			query.WithCostAttributionLabel("costAttributionTeam"),
+			query.WithAutoPartition(true),
+			query.WithPartitionValue(true),
+			query.WithColumnOrder(),
+		).Build()
+
+		assert.NoError(t, err)
+		assert.Equal(t, `INSERT OVERWRITE TABLE project.playground.table_destination 
+SELECT col1, col2, _partitiontime FROM (
+SELECT col1, col2, TIMESTAMP('2021-01-01') as _partitiontime FROM (
+select * from project.playground.table
+-- this is comment
+)
+)
+;
+--cost_attribution_team=costAttributionTeam
+
+`, queryToExecute)
 	})
 	t.Run("returns query for replace load method with comment in the end with semicolon", func(t *testing.T) {
 		queryToExecute := `select * from project.playground.table;
@@ -638,6 +716,97 @@ on append_test.id = source.id
 WHEN MATCHED THEN UPDATE
 SET append_test.id = 2
 ;`, query)
+	})
+
+	t.Run("returns query for merge load method with multiple dml and ddl and contains function with cost attribution label", func(t *testing.T) {
+		queryToExecute := `SET odps.table.append2.enable=true;
+
+CREATE TABLE IF NOT EXISTS append_test (id bigint)
+TBLPROPERTIES('table.format.version'='2');
+
+FUNCTION castStringToBoolean (@field STRING) AS CASE
+WHEN TOLOWER(@field) = '1.0' THEN true
+WHEN TOLOWER(@field) = '0.0' THEN false
+WHEN TOLOWER(@field) = '1' THEN true
+WHEN TOLOWER(@field) = '0' THEN false
+WHEN TOLOWER(@field) = 'true' THEN true
+WHEN TOLOWER(@field) = 'false' THEN false
+END;
+
+function my_add(@a BIGINT) as @a + 1;
+
+INSERT OVERWRITE TABLE append_test VALUES(0),(1);
+
+@src := SELECT my_add(1) id;
+
+MERGE INTO append_test
+USING (SELECT castStringToBoolean(id) FROM @src) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 2;`
+		odspClient := &mockOdpsClient{}
+
+		query, err := query.NewBuilder(
+			logger.NewDefaultLogger(),
+			odspClient,
+			query.WithQuery(queryToExecute),
+			query.WithMethod(query.MERGE),
+			query.WithCostAttributionLabel("costAttributionTeam"),
+		).Build()
+		assert.NoError(t, err)
+		assert.Equal(t, `SET odps.table.append2.enable=true
+;
+CREATE TABLE IF NOT EXISTS append_test (id bigint)
+TBLPROPERTIES('table.format.version'='2')
+;
+--cost_attribution_team=costAttributionTeam
+
+
+--*--optimus-break-marker--*--
+SET odps.table.append2.enable=true
+;
+FUNCTION castStringToBoolean (@field STRING) AS CASE
+WHEN TOLOWER(@field) = '1.0' THEN true
+WHEN TOLOWER(@field) = '0.0' THEN false
+WHEN TOLOWER(@field) = '1' THEN true
+WHEN TOLOWER(@field) = '0' THEN false
+WHEN TOLOWER(@field) = 'true' THEN true
+WHEN TOLOWER(@field) = 'false' THEN false
+END
+;
+function my_add(@a BIGINT) as @a + 1
+;
+INSERT OVERWRITE TABLE append_test VALUES(0),(1)
+;
+--cost_attribution_team=costAttributionTeam
+
+
+--*--optimus-break-marker--*--
+SET odps.table.append2.enable=true
+;
+FUNCTION castStringToBoolean (@field STRING) AS CASE
+WHEN TOLOWER(@field) = '1.0' THEN true
+WHEN TOLOWER(@field) = '0.0' THEN false
+WHEN TOLOWER(@field) = '1' THEN true
+WHEN TOLOWER(@field) = '0' THEN false
+WHEN TOLOWER(@field) = 'true' THEN true
+WHEN TOLOWER(@field) = 'false' THEN false
+END
+;
+function my_add(@a BIGINT) as @a + 1
+;
+@src := SELECT my_add(1) id
+;
+MERGE INTO append_test
+USING (SELECT castStringToBoolean(id) FROM @src) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 2
+;
+--cost_attribution_team=costAttributionTeam
+
+
+`, query)
 	})
 	t.Run("returns query for merge load method when there's a comment with semicolon", func(t *testing.T) {
 		queryToExecute := `SET odps.table.append2.enable=true;
