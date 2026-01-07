@@ -805,7 +805,6 @@ SET append_test.id = 2
 ;
 --cost_attribution_team=costAttributionTeam
 
-
 `, query)
 	})
 	t.Run("returns query for merge load method when there's a comment with semicolon", func(t *testing.T) {
