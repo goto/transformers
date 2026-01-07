@@ -22,10 +22,11 @@ type Builder struct {
 
 	query string
 
-	method             Method
-	destinationTableID string
-	orderedColumns     []string
-	overridedValues    map[string]string
+	method              Method
+	destinationTableID  string
+	costAttributionTeam string
+	orderedColumns      []string
+	overridedValues     map[string]string
 
 	enableAutoPartition  bool
 	enablePartitionValue bool
@@ -54,6 +55,10 @@ func (b *Builder) SetOptions(options ...Option) *Builder {
 	return b
 }
 
+func getCostAttributionComment(teamName string) string {
+	return fmt.Sprintf("--cost_attribution_team=%s\n", teamName)
+}
+
 // Build constructs the final query with the given options
 func (b *Builder) Build() (string, error) {
 	if b.query == "" {
@@ -64,6 +69,9 @@ func (b *Builder) Build() (string, error) {
 		// split query components
 		hrs, vars, queries := SplitQueryComponents(b.query)
 		if len(queries) <= 1 {
+			if b.costAttributionTeam != "" {
+				return fmt.Sprintf("%s\n%s", b.query, getCostAttributionComment(b.costAttributionTeam)), nil
+			}
 			return b.query, nil
 		}
 		query := b.constructMergeQuery(hrs, vars, queries)
@@ -143,7 +151,11 @@ func (b *Builder) Build() (string, error) {
 	if varsAndUDFs != "" {
 		varsAndUDFs += "\n"
 	}
+
 	query = fmt.Sprintf("%s%s%s%s", hr, drops, varsAndUDFs, query)
+	if b.costAttributionTeam != "" {
+		query = fmt.Sprintf("%s\n%s\n", query, getCostAttributionComment(b.costAttributionTeam))
+	}
 	return query, nil
 }
 
@@ -204,6 +216,9 @@ func (b *Builder) constructMergeQuery(hrs, vars, queries []string) string {
 			builder.WriteString(fmt.Sprintf("%s\n", variables))
 		}
 		builder.WriteString(fmt.Sprintf("%s\n;", q))
+		if b.costAttributionTeam != "" {
+			builder.WriteString(fmt.Sprintf("\n%s\n", getCostAttributionComment(b.costAttributionTeam)))
+		}
 		if i < len(queries)-1 {
 			builder.WriteString(fmt.Sprintf("\n%s\n", BREAK_MARKER))
 		}

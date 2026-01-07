@@ -46,3 +46,9 @@ func WithOverridedValue(field, value string) Option {
 		b.overridedValues[field] = value
 	}
 }
+
+func WithCostAttributionLabel(teamName string) Option {
+	return func(b *Builder) {
+		b.costAttributionTeam = teamName
+	}
+}

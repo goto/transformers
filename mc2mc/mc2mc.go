@@ -82,6 +82,7 @@ func mc2mc(envs []string) error {
 			query.WithOverridedValue("_partitiondate", fmt.Sprintf("DATE(timestamp('%s'))", dstart)),
 			query.WithAutoPartition(cfg.DevEnableAutoPartition == "true"),
 			query.WithPartitionValue(cfg.DevEnablePartitionValue == "true"),
+			query.WithCostAttributionLabel(cfg.CostAttributionTeam),
 			query.WithColumnOrder(),
 		).Build()
 		if err != nil {
@@ -97,6 +98,7 @@ func mc2mc(envs []string) error {
 			query.WithDestination(cfg.DestinationTableID),
 			query.WithAutoPartition(cfg.DevEnableAutoPartition == "true"),
 			query.WithPartitionValue(cfg.DevEnablePartitionValue == "true"),
+			query.WithCostAttributionLabel(cfg.CostAttributionTeam),
 			query.WithColumnOrder(),
 		)
 
@@ -151,6 +153,7 @@ func mc2mc(envs []string) error {
 			l,
 			client.NewODPSClient(l, cfg.GenOdps()),
 			query.WithQuery(string(raw)),
+			query.WithCostAttributionLabel(cfg.CostAttributionTeam),
 			query.WithMethod(query.MERGE),
 		).Build()
 		if err != nil {
