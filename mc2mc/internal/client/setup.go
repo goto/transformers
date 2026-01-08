@@ -87,3 +87,14 @@ func SetupRetry(max int, backoffMs int) SetupFn {
 		return nil
 	}
 }
+
+func SetupPriority(priority int) SetupFn {
+	return func(c *Client) error {
+		if priority < 0 || priority > 9 {
+			err := errors.New("priority must be between 0 and 9")
+			return errors.WithStack(err)
+		}
+		c.OdpsClient.SetPriority(priority)
+		return nil
+	}
+}

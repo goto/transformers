@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/aliyun/aliyun-odps-go-sdk/odps"
+	"github.com/aliyun/aliyun-odps-go-sdk/odps/options"
 	"github.com/pkg/errors"
 )
 
@@ -17,6 +18,7 @@ type odpsClient struct {
 	logger *slog.Logger
 	client *odps.Odps
 
+	priority               int
 	logViewRetentionInDays int
 	isDryRun               bool
 	retry                  func(f func() error) error
@@ -45,7 +47,7 @@ func (c *odpsClient) ExecSQL(ctx context.Context, query string, additionalHints 
 
 	hints := addHints(additionalHints, query)
 
-	taskIns, err := c.client.ExecSQlWithHints(query, hints)
+	taskIns, err := c.execSQLWithHintsAndPriority(query, hints)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -99,6 +101,11 @@ func (c *odpsClient) SetRetry(max int, backoffMs int) {
 	}
 }
 
+// SetPriority sets the priority for the odps client
+func (c *odpsClient) SetPriority(priority int) {
+	c.priority = priority
+}
+
 // GetPartitionNames returns the partition names of the given table
 // by querying the table schema.
 func (c *odpsClient) GetPartitionNames(_ context.Context, tableID string) ([]string, error) {
@@ -127,6 +134,21 @@ func (c *odpsClient) GetOrderedColumns(tableID string) ([]string, error) {
 	}
 
 	return columnNames, nil
+}
+
+// execSQLWithHintsAndPriority executes the given query with hints and priority
+// ref: https://github.com/aliyun/aliyun-odps-go-sdk/blob/4d1188c6ac989acc9cacc9b3e2ed0f3901a3b3ef/odps/odps.go#L131
+func (c *odpsClient) execSQLWithHintsAndPriority(query string, hints map[string]string) (*odps.Instance, error) {
+	if c.client.DefaultProjectName() == "" {
+		err := errors.New("default project is not set")
+		return nil, errors.WithStack(err)
+	}
+	option := options.NewSQLTaskOptions()
+	option.Hints = hints
+	option.InstanceOption = options.NewCreateInstanceOptions()
+	option.InstanceOption.Priority = c.priority // add priority to instance option
+	taskIns, err := c.client.ExecSQlWithOption(query, option)
+	return taskIns, errors.WithStack(err)
 }
 
 // generateLogView generates the log view for the given task instance
