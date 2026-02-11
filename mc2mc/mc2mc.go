@@ -84,6 +84,7 @@ func mc2mc(envs []string) error {
 			query.WithPartitionValue(cfg.DevEnablePartitionValue == "true"),
 			query.WithCostAttributionLabel(cfg.CostAttributionTeam),
 			query.WithColumnOrder(),
+			query.WithDryRun(cfg.DryRun),
 		).Build()
 		if err != nil {
 			return errors.WithStack(err)
@@ -100,6 +101,7 @@ func mc2mc(envs []string) error {
 			query.WithPartitionValue(cfg.DevEnablePartitionValue == "true"),
 			query.WithCostAttributionLabel(cfg.CostAttributionTeam),
 			query.WithColumnOrder(),
+			query.WithDryRun(cfg.DryRun),
 		)
 
 		// -- TODO(START): refactor this part --
@@ -155,6 +157,7 @@ func mc2mc(envs []string) error {
 			query.WithQuery(string(raw)),
 			query.WithCostAttributionLabel(cfg.CostAttributionTeam),
 			query.WithMethod(query.MERGE),
+			query.WithDryRun(cfg.DryRun),
 		).Build()
 		if err != nil {
 			return errors.WithStack(err)

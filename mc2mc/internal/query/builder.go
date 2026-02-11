@@ -30,6 +30,7 @@ type Builder struct {
 
 	enableAutoPartition  bool
 	enablePartitionValue bool
+	enableDryRun         bool
 }
 
 // NewBuilder creates a new query builder with the given options
@@ -68,12 +69,6 @@ func (b *Builder) Build() (string, error) {
 	if b.method == MERGE {
 		// split query components
 		hrs, vars, queries := SplitQueryComponents(b.query)
-		if len(queries) <= 1 {
-			if b.costAttributionTeam != "" {
-				return fmt.Sprintf("%s\n%s", b.query, getCostAttributionComment(b.costAttributionTeam)), nil
-			}
-			return b.query, nil
-		}
 		query := b.constructMergeQuery(hrs, vars, queries)
 		return query, nil
 	}
@@ -141,11 +136,25 @@ func (b *Builder) Build() (string, error) {
 		}
 	}
 
+	if b.enableDryRun {
+		// append explain to the query for dry run
+		query = fmt.Sprintf("EXPLAIN \n%s", query)
+	}
+
 	// construct final query with headers, drops, variables and udfs
 	if hr != "" {
 		hr += "\n"
 	}
 	if drops != "" {
+		if b.enableDryRun {
+			dropLines := strings.Split(drops, "\n")
+			var explainedDrops []string
+			for _, line := range dropLines {
+				line = strings.TrimSpace(line)
+				explainedDrops = append(explainedDrops, fmt.Sprintf("EXPLAIN %s", line))
+			}
+			drops = strings.Join(explainedDrops, "\n")
+		}
 		drops += "\n"
 	}
 	if varsAndUDFs != "" {
@@ -201,6 +210,14 @@ func (b *Builder) constructOverridedValues(query string) (string, error) {
 
 // constructMergeQueries constructs merge queries with headers and variables
 func (b *Builder) constructMergeQuery(hrs, vars, queries []string) string {
+	if !b.enableDryRun && len(queries) == 1 {
+		// maintaining existing logic for single query
+		if b.costAttributionTeam != "" {
+			return fmt.Sprintf("%s\n%s", b.query, getCostAttributionComment(b.costAttributionTeam))
+		}
+		return b.query
+	}
+
 	builder := strings.Builder{}
 	for i, q := range queries {
 		q = strings.TrimSpace(q)
@@ -214,6 +231,10 @@ func (b *Builder) constructMergeQuery(hrs, vars, queries []string) string {
 		}
 		if variables != "" && !IsDDL(q) { // skip variables if it's ddl
 			builder.WriteString(fmt.Sprintf("%s\n", variables))
+		}
+		if b.enableDryRun {
+			// append explain to the DDL query part
+			builder.WriteString("EXPLAIN\n")
 		}
 		builder.WriteString(fmt.Sprintf("%s\n;", q))
 		if b.costAttributionTeam != "" {

@@ -39,8 +39,7 @@ func NewODPSClient(logger *slog.Logger, client *odps.Odps) *odpsClient {
 // when context is cancelled.
 func (c *odpsClient) ExecSQL(ctx context.Context, query string, additionalHints map[string]string) error {
 	if c.isDryRun {
-		c.logger.Info("dry run mode, skipping execution")
-		return nil
+		c.logger.Info("[DRY-RUN] running query in dry-run mode with EXPLAIN.")
 	}
 
 	hints := addHints(additionalHints, query)
