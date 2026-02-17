@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/goto/transformers/mc2mc/internal/query"
+	"github.com/goto/transformers/mc2mc/ext/query"
 )
 
 func TestSplitQueryComponents(t *testing.T) {
