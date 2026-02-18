@@ -994,6 +994,309 @@ SET append_test.id = 2
 	})
 }
 
+func TestBuilder_BuildWithDryRun(t *testing.T) {
+	t.Run("returns dry run query for merge load method", func(t *testing.T) {
+		queryToExecute := `DELETE FROM project.playground.table WHERE id = 1;
+INSERT INTO project.playground.table SELECT * FROM project.playground.table_source;`
+		odspClient := &mockOdpsClient{}
+
+		query, err := query.NewBuilder(
+			logger.NewDefaultLogger(),
+			odspClient,
+			query.WithQuery(queryToExecute),
+			query.WithMethod(query.MERGE),
+			query.WithDryRun(true),
+		).Build()
+
+		assert.NoError(t, err)
+		assert.Equal(t, `EXPLAIN
+DELETE FROM project.playground.table WHERE id = 1
+;
+--*--optimus-break-marker--*--
+EXPLAIN
+INSERT INTO project.playground.table SELECT * FROM project.playground.table_source
+;`, query)
+	})
+
+	t.Run("returns dry run query for APPEND load method", func(t *testing.T) {
+		queryToExecute := `select * from project.playground.table;`
+		odspClient := &mockOdpsClient{
+			orderedColumns: func() ([]string, error) {
+				return []string{"col1", "col2", "_partitiontime"}, nil
+			},
+			partitionResult: func() ([]string, error) {
+				return []string{}, nil
+			},
+		}
+		destinationTableID := "project.playground.table_destination"
+
+		query, err := query.NewBuilder(
+			logger.NewDefaultLogger(),
+			odspClient,
+			query.WithQuery(queryToExecute),
+			query.WithMethod(query.APPEND),
+			query.WithDestination(destinationTableID),
+			query.WithColumnOrder(),
+			query.WithDryRun(true),
+		).Build()
+
+		assert.NoError(t, err)
+		assert.Equal(t, `EXPLAIN 
+INSERT INTO TABLE project.playground.table_destination 
+SELECT col1, col2, _partitiontime FROM (
+select * from project.playground.table
+)
+;`, query)
+	})
+
+	t.Run("returns dry run query for replace load method", func(t *testing.T) {
+		queryToExecute := `select * from project.playground.table;`
+		odspClient := &mockOdpsClient{
+			orderedColumns: func() ([]string, error) {
+				return []string{"col1", "col2", "_partitiontime"}, nil
+			},
+			partitionResult: func() ([]string, error) {
+				return []string{}, nil
+			},
+		}
+		destinationTableID := "project.playground.table_destination"
+
+		query, err := query.NewBuilder(
+			logger.NewDefaultLogger(),
+			odspClient,
+			query.WithQuery(queryToExecute),
+			query.WithMethod(query.REPLACE),
+			query.WithDestination(destinationTableID),
+			query.WithColumnOrder(),
+			query.WithDryRun(true),
+		).Build()
+
+		assert.NoError(t, err)
+		assert.Equal(t, `EXPLAIN 
+INSERT OVERWRITE TABLE project.playground.table_destination 
+SELECT col1, col2, _partitiontime FROM (
+select * from project.playground.table
+)
+;`, query)
+	})
+
+	t.Run("returns dry run query for append load method with partition", func(t *testing.T) {
+		queryToExecute := `select * from project.playground.table;`
+		odspClient := &mockOdpsClient{
+			orderedColumns: func() ([]string, error) {
+				return []string{"col1", "col2", "_partitiontime"}, nil
+			},
+			partitionResult: func() ([]string, error) {
+				return []string{"col3"}, nil
+			},
+		}
+		destinationTableID := "project.playground.table_destination"
+
+		query, err := query.NewBuilder(
+			logger.NewDefaultLogger(),
+			odspClient,
+			query.WithQuery(queryToExecute),
+			query.WithMethod(query.APPEND),
+			query.WithDestination(destinationTableID),
+			query.WithColumnOrder(),
+			query.WithDryRun(true),
+		).Build()
+
+		assert.NoError(t, err)
+		assert.Equal(t, `EXPLAIN 
+INSERT INTO TABLE project.playground.table_destination PARTITION (col3) 
+SELECT col1, col2, _partitiontime FROM (
+select * from project.playground.table
+)
+;`, query)
+	})
+
+	t.Run("returns dry run query with drops and variables", func(t *testing.T) {
+		queryToExecute := `SET odps.sql.decimal.odps2=true;
+DROP TABLE IF EXISTS project.playground.temp_table;
+DROP TABLE IF EXISTS project.playground.temp_table_2;
+@variable := SELECT 1 as value;
+SELECT * FROM project.playground.table;`
+		odspClient := &mockOdpsClient{
+			orderedColumns: func() ([]string, error) {
+				return []string{"col1", "col2"}, nil
+			},
+			partitionResult: func() ([]string, error) {
+				return []string{}, nil
+			},
+		}
+		destinationTableID := "project.playground.table_destination"
+
+		query, err := query.NewBuilder(
+			logger.NewDefaultLogger(),
+			odspClient,
+			query.WithQuery(queryToExecute),
+			query.WithMethod(query.APPEND),
+			query.WithDestination(destinationTableID),
+			query.WithColumnOrder(),
+			query.WithDryRun(true),
+		).Build()
+
+		assert.NoError(t, err)
+		assert.Equal(t, `SET odps.sql.decimal.odps2=true
+;
+EXPLAIN
+DROP TABLE IF EXISTS project.playground.temp_table
+;
+EXPLAIN
+DROP TABLE IF EXISTS project.playground.temp_table_2
+;
+@variable := SELECT 1 as value
+;
+EXPLAIN 
+INSERT INTO TABLE project.playground.table_destination 
+SELECT col1, col2 FROM (
+SELECT * FROM project.playground.table
+)
+;`, query)
+	})
+
+	t.Run("returns dry run query with overridden values", func(t *testing.T) {
+		queryToExecute := `select * from project.playground.table;`
+		odspClient := &mockOdpsClient{
+			orderedColumns: func() ([]string, error) {
+				return []string{"col1", "col2", "_partitiontime"}, nil
+			},
+			partitionResult: func() ([]string, error) {
+				return []string{}, nil
+			},
+		}
+		destinationTableID := "project.playground.table_destination"
+
+		query, err := query.NewBuilder(
+			logger.NewDefaultLogger(),
+			odspClient,
+			query.WithQuery(queryToExecute),
+			query.WithMethod(query.APPEND),
+			query.WithDestination(destinationTableID),
+			query.WithOverridedValue("_partitiontime", "TIMESTAMP('2021-01-01')"),
+			query.WithColumnOrder(),
+			query.WithDryRun(true),
+		).Build()
+
+		assert.NoError(t, err)
+		assert.Equal(t, `EXPLAIN 
+INSERT INTO TABLE project.playground.table_destination 
+SELECT col1, col2, _partitiontime FROM (
+SELECT col1, col2, TIMESTAMP('2021-01-01') as _partitiontime FROM (
+select * from project.playground.table
+)
+)
+;`, query)
+	})
+
+	t.Run("returns dry run query with cost attribution", func(t *testing.T) {
+		queryToExecute := `select * from project.playground.table;`
+		odspClient := &mockOdpsClient{
+			orderedColumns: func() ([]string, error) {
+				return []string{"col1", "col2"}, nil
+			},
+			partitionResult: func() ([]string, error) {
+				return []string{}, nil
+			},
+		}
+		destinationTableID := "project.playground.table_destination"
+
+		query, err := query.NewBuilder(
+			logger.NewDefaultLogger(),
+			odspClient,
+			query.WithQuery(queryToExecute),
+			query.WithMethod(query.APPEND),
+			query.WithDestination(destinationTableID),
+			query.WithCostAttributionLabel("test-team"),
+			query.WithColumnOrder(),
+			query.WithDryRun(true),
+		).Build()
+
+		assert.NoError(t, err)
+		assert.Contains(t, query, "EXPLAIN")
+		assert.Contains(t, query, "--cost_attribution_team=test-team")
+	})
+
+	t.Run("returns error for empty query in dry run mode", func(t *testing.T) {
+		odspClient := &mockOdpsClient{}
+
+		queryToExecute, err := query.NewBuilder(
+			logger.NewDefaultLogger(),
+			odspClient,
+			query.WithDryRun(true),
+		).Build()
+
+		assert.Error(t, err)
+		assert.Empty(t, queryToExecute)
+		assert.Contains(t, err.Error(), "query is required")
+	})
+
+	t.Run("returns dry run query for merge method with complex query components", func(t *testing.T) {
+		queryToExecute := `SET odps.table.append2.enable=true;
+@src := SELECT 1 id;
+@src2 := SELECT id FROM append_tmp;
+CREATE TABLE append_tmp AS SELECT * FROM @src;
+CREATE TABLE append_tmp2(id bigint);
+MERGE INTO append_test
+USING (SELECT * FROM @src2) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 2;`
+		odspClient := &mockOdpsClient{}
+
+		query, err := query.NewBuilder(
+			logger.NewDefaultLogger(),
+			odspClient,
+			query.WithQuery(queryToExecute),
+			query.WithMethod(query.MERGE),
+			query.WithCostAttributionLabel("test-team"),
+			query.WithDryRun(true),
+		).Build()
+
+		assert.NoError(t, err)
+		assert.NoError(t, err)
+		assert.Equal(t, `SET odps.table.append2.enable=true
+;
+@src := SELECT 1 id
+;
+@src2 := SELECT id FROM append_tmp
+;
+EXPLAIN
+CREATE TABLE append_tmp AS SELECT * FROM @src
+;
+--cost_attribution_team=test-team
+
+
+--*--optimus-break-marker--*--
+SET odps.table.append2.enable=true
+;
+EXPLAIN
+CREATE TABLE append_tmp2(id bigint)
+;
+--cost_attribution_team=test-team
+
+
+--*--optimus-break-marker--*--
+SET odps.table.append2.enable=true
+;
+@src := SELECT 1 id
+;
+@src2 := SELECT id FROM append_tmp
+;
+EXPLAIN
+MERGE INTO append_test
+USING (SELECT * FROM @src2) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 2
+;
+--cost_attribution_team=test-team
+
+`, query)
+	})
+}
+
 type mockOdpsClient struct {
 	partitionResult func() ([]string, error)
 	execSQLResult   func() error
