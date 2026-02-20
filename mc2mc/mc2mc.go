@@ -14,10 +14,10 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/goto/transformers/mc2mc/ext/query"
 	"github.com/goto/transformers/mc2mc/internal/client"
 	"github.com/goto/transformers/mc2mc/internal/config"
 	"github.com/goto/transformers/mc2mc/internal/logger"
+	"github.com/goto/transformers/mc2mc/pkg/query"
 )
 
 func mc2mc(envs []string) error {

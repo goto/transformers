@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/goto/transformers/mc2mc/ext/query"
 	"github.com/goto/transformers/mc2mc/internal/logger"
+	"github.com/goto/transformers/mc2mc/pkg/query"
 	"github.com/stretchr/testify/assert"
 )
 
