@@ -165,7 +165,7 @@ func SeparateVariablesUDFsAndQuery(query string) (string, string) {
 	return variableUDFStr, queryStr
 }
 
-func SeparateDropsAndQuery(query string) (string, string) {
+func SeparateDropsAndQuery(query string) ([]string, string) {
 	drops := []string{}
 	query = strings.TrimSpace(query)
 	remainingQueries := []string{}
@@ -179,7 +179,7 @@ func SeparateDropsAndQuery(query string) (string, string) {
 		}
 		stmtWithoutComment := RemoveComments(stmt)
 		if dropPattern.MatchString(strings.TrimSpace(stmtWithoutComment)) {
-			drops = append(drops, stmt)
+			drops = append(drops, strings.TrimSpace(stmt))
 		} else if strings.TrimSpace(stmtWithoutComment) == "" {
 			// if the statement is empty, it's a comment, then omit it
 			// since it doesn't make sense to execute this statement
@@ -188,19 +188,10 @@ func SeparateDropsAndQuery(query string) (string, string) {
 		}
 	}
 
-	dropStr := ""
-	if len(drops) > 0 {
-		for i, drop := range drops {
-			drops[i] = strings.TrimSpace(drop)
-		}
-		dropStr = strings.Join(drops, "\n;\n")
-		dropStr += "\n;"
-	}
-
 	// join the remaining queries back together
 	queryStr := strings.Join(remainingQueries, "\n;\n")
 
-	return dropStr, queryStr
+	return drops, queryStr
 }
 
 func RemoveComments(query string) string {

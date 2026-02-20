@@ -52,3 +52,9 @@ func WithCostAttributionLabel(teamName string) Option {
 		b.costAttributionTeam = teamName
 	}
 }
+
+func WithDryRun(enable bool) Option {
+	return func(b *Builder) {
+		b.enableDryRun = enable
+	}
+}
