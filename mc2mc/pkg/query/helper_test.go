@@ -359,7 +359,7 @@ USING (SELECT * FROM @src) source
 on append_test.id = source.id
 WHEN MATCHED THEN UPDATE
 SET append_test.id = 2;`
-		drops, query := query.SeparateDropsAndQuery(q1, false)
+		drops, query := query.SeparateDropsAndQuery(q1)
 		assert.Empty(t, drops)
 		assert.Equal(t, `MERGE INTO append_test
 USING (SELECT * FROM @src) source
@@ -374,25 +374,8 @@ USING (SELECT * FROM @src) source
 on append_test.id = source.id
 WHEN MATCHED THEN UPDATE
 SET append_test.id = 2;`
-		drops, query := query.SeparateDropsAndQuery(q1, false)
+		drops, query := query.SeparateDropsAndQuery(q1)
 		assert.Equal(t, "DROP TABLE IF EXISTS append_test\n;", drops)
-		assert.Equal(t, `MERGE INTO append_test
-USING (SELECT * FROM @src) source
-on append_test.id = source.id
-WHEN MATCHED THEN UPDATE
-SET append_test.id = 2`, query)
-	})
-
-	t.Run("split multiple drops and query with explain", func(t *testing.T) {
-		q1 := `DROP TABLE IF EXISTS append_test;
-DROP TABLE IF EXISTS append_test_2;
-MERGE INTO append_test
-USING (SELECT * FROM @src) source
-on append_test.id = source.id
-WHEN MATCHED THEN UPDATE
-SET append_test.id = 2;`
-		drops, query := query.SeparateDropsAndQuery(q1, true)
-		assert.Equal(t, "EXPLAIN\nDROP TABLE IF EXISTS append_test\n;\nEXPLAIN\nDROP TABLE IF EXISTS append_test_2\n;", drops)
 		assert.Equal(t, `MERGE INTO append_test
 USING (SELECT * FROM @src) source
 on append_test.id = source.id

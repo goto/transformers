@@ -1041,7 +1041,7 @@ INSERT INTO project.playground.table SELECT * FROM project.playground.table_sour
 		).Build()
 
 		assert.NoError(t, err)
-		assert.Equal(t, `EXPLAIN 
+		assert.Equal(t, `EXPLAIN
 INSERT INTO TABLE project.playground.table_destination 
 SELECT col1, col2, _partitiontime FROM (
 select * from project.playground.table
@@ -1072,7 +1072,7 @@ select * from project.playground.table
 		).Build()
 
 		assert.NoError(t, err)
-		assert.Equal(t, `EXPLAIN 
+		assert.Equal(t, `EXPLAIN
 INSERT OVERWRITE TABLE project.playground.table_destination 
 SELECT col1, col2, _partitiontime FROM (
 select * from project.playground.table
@@ -1103,7 +1103,7 @@ select * from project.playground.table
 		).Build()
 
 		assert.NoError(t, err)
-		assert.Equal(t, `EXPLAIN 
+		assert.Equal(t, `EXPLAIN
 INSERT INTO TABLE project.playground.table_destination PARTITION (col3) 
 SELECT col1, col2, _partitiontime FROM (
 select * from project.playground.table
@@ -1148,7 +1148,7 @@ DROP TABLE IF EXISTS project.playground.temp_table_2
 ;
 @variable := SELECT 1 as value
 ;
-EXPLAIN 
+EXPLAIN
 INSERT INTO TABLE project.playground.table_destination 
 SELECT col1, col2 FROM (
 SELECT * FROM project.playground.table
@@ -1180,7 +1180,7 @@ SELECT * FROM project.playground.table
 		).Build()
 
 		assert.NoError(t, err)
-		assert.Equal(t, `EXPLAIN 
+		assert.Equal(t, `EXPLAIN
 INSERT INTO TABLE project.playground.table_destination 
 SELECT col1, col2, _partitiontime FROM (
 SELECT col1, col2, TIMESTAMP('2021-01-01') as _partitiontime FROM (

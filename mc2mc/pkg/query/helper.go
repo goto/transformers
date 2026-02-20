@@ -165,7 +165,7 @@ func SeparateVariablesUDFsAndQuery(query string) (string, string) {
 	return variableUDFStr, queryStr
 }
 
-func SeparateDropsAndQuery(query string, useExplainInDrops bool) (string, string) {
+func SeparateDropsAndQuery(query string) (string, string) {
 	drops := []string{}
 	query = strings.TrimSpace(query)
 	remainingQueries := []string{}
@@ -191,11 +191,7 @@ func SeparateDropsAndQuery(query string, useExplainInDrops bool) (string, string
 	dropStr := ""
 	if len(drops) > 0 {
 		for i, drop := range drops {
-			dropStmt := strings.TrimSpace(drop)
-			if useExplainInDrops {
-				dropStmt = fmt.Sprintf("EXPLAIN\n%s", dropStmt)
-			}
-			drops[i] = dropStmt
+			drops[i] = strings.TrimSpace(drop)
 		}
 		dropStr = strings.Join(drops, "\n;\n")
 		dropStr += "\n;"

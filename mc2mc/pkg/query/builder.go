@@ -76,7 +76,7 @@ func (b *Builder) Build() (string, error) {
 	// separate headers, variables and udfs from the query
 	hr, query := SeparateHeadersAndQuery(b.query)
 	varsAndUDFs, query := SeparateVariablesUDFsAndQuery(query)
-	drops, query := SeparateDropsAndQuery(query, b.enableDryRun)
+	drops, query := SeparateDropsAndQuery(query)
 
 	// destination table is required for append and replace method
 	if b.destinationTableID == "" {
@@ -138,7 +138,7 @@ func (b *Builder) Build() (string, error) {
 
 	if b.enableDryRun {
 		// append explain to the query for dry run
-		query = fmt.Sprintf("EXPLAIN \n%s", query)
+		query = fmt.Sprintf("EXPLAIN\n%s", query)
 	}
 
 	// construct final query with headers, drops, variables and udfs
@@ -146,6 +146,15 @@ func (b *Builder) Build() (string, error) {
 		hr += "\n"
 	}
 	if drops != "" {
+		if b.enableDryRun {
+			// explode drops into separate statements for dry run to ensure they are included in the explain plan
+			dropStatements := strings.Split(strings.TrimSuffix(drops, "\n;"), "\n;\n")
+			for i, drop := range dropStatements {
+				dropStatements[i] = fmt.Sprintf("EXPLAIN\n%s\n;", drop)
+			}
+			// rejoin the drop statements back together
+			drops = strings.Join(dropStatements, "\n")
+		}
 		drops += "\n"
 	}
 	if varsAndUDFs != "" {
