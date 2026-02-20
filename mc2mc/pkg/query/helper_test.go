@@ -375,7 +375,7 @@ on append_test.id = source.id
 WHEN MATCHED THEN UPDATE
 SET append_test.id = 2;`
 		drops, query := query.SeparateDropsAndQuery(q1)
-		assert.Equal(t, "DROP TABLE IF EXISTS append_test\n;", drops)
+		assert.Equal(t, []string{"DROP TABLE IF EXISTS append_test"}, drops)
 		assert.Equal(t, `MERGE INTO append_test
 USING (SELECT * FROM @src) source
 on append_test.id = source.id

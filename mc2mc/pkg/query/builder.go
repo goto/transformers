@@ -145,23 +145,21 @@ func (b *Builder) Build() (string, error) {
 	if hr != "" {
 		hr += "\n"
 	}
-	if drops != "" {
+	dropsStr := ""
+	if len(drops) > 0 {
 		if b.enableDryRun {
-			// explode drops into separate statements for dry run to ensure they are included in the explain plan
-			dropStatements := strings.Split(strings.TrimSuffix(drops, "\n;"), "\n;\n")
-			for i, drop := range dropStatements {
-				dropStatements[i] = fmt.Sprintf("EXPLAIN\n%s\n;", drop)
+			for i, drop := range drops {
+				drops[i] = fmt.Sprintf("EXPLAIN\n%s", drop)
 			}
-			// rejoin the drop statements back together
-			drops = strings.Join(dropStatements, "\n")
 		}
-		drops += "\n"
+		dropsStr = strings.Join(drops, "\n;\n")
+		dropsStr += "\n;\n"
 	}
 	if varsAndUDFs != "" {
 		varsAndUDFs += "\n"
 	}
 
-	query = fmt.Sprintf("%s%s%s%s", hr, drops, varsAndUDFs, query)
+	query = fmt.Sprintf("%s%s%s%s", hr, dropsStr, varsAndUDFs, query)
 	if b.costAttributionTeam != "" {
 		query = fmt.Sprintf("%s\n%s\n", query, getCostAttributionComment(b.costAttributionTeam))
 	}
