@@ -19,6 +19,7 @@ type OdpsClient interface {
 	SetLogViewRetentionInDays(days int)
 	SetDryRun(dryRun bool)
 	SetRetry(max int, backoffMs int)
+	SetPriority(priority int)
 }
 
 type Client struct {
