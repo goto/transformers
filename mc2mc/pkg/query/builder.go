@@ -28,9 +28,10 @@ type Builder struct {
 	orderedColumns      []string
 	overridedValues     map[string]string
 
-	enableAutoPartition  bool
-	enablePartitionValue bool
-	enableDryRun         bool
+	enableAutoPartition    bool
+	enablePartitionValue   bool
+	enableDryRun           bool
+	disableSplitMergeQuery bool
 }
 
 // NewBuilder creates a new query builder with the given options
@@ -67,6 +68,13 @@ func (b *Builder) Build() (string, error) {
 	}
 
 	if b.method == MERGE {
+		if b.disableSplitMergeQuery {
+			query := b.query
+			if b.costAttributionTeam != "" {
+				query = fmt.Sprintf("%s\n%s", query, getCostAttributionComment(b.costAttributionTeam))
+			}
+			return query, nil
+		}
 		// split query components
 		hrs, vars, queries := SplitQueryComponents(b.query)
 		query := b.constructMergeQuery(hrs, vars, queries)
@@ -208,6 +216,13 @@ func (b *Builder) constructOverridedValues(query string) (string, error) {
 
 // constructMergeQueries constructs merge queries with headers and variables
 func (b *Builder) constructMergeQuery(hrs, vars, queries []string) string {
+	if b.disableSplitMergeQuery {
+		if b.costAttributionTeam != "" {
+			return fmt.Sprintf("%s\n%s", b.query, getCostAttributionComment(b.costAttributionTeam))
+		}
+		return b.query
+	}
+
 	if !b.enableDryRun && len(queries) == 1 {
 		// maintaining existing logic for single query
 		if b.costAttributionTeam != "" {
