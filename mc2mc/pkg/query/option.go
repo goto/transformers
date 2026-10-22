@@ -59,8 +59,8 @@ func WithDryRun(enable bool) Option {
 	}
 }
 
-func WithDisableSplitMergeQuery(enable bool) Option {
+func WithDisableMultiQueryGeneration(disable bool) Option {
 	return func(b *Builder) {
-		b.disableSplitMergeQuery = enable
+		b.disableMultiQueryGeneration = disable
 	}
 }

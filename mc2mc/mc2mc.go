@@ -159,16 +159,12 @@ func mc2mc(envs []string) error {
 			query.WithCostAttributionLabel(cfg.CostAttributionTeam),
 			query.WithMethod(query.MERGE),
 			query.WithDryRun(cfg.DryRun),
-			query.WithDisableSplitMergeQuery(cfg.DisableMultiQueryGeneration),
+			query.WithDisableMultiQueryGeneration(cfg.DisableMultiQueryGeneration),
 		).Build()
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		if cfg.DisableMultiQueryGeneration {
-			queriesToExecute = append(queriesToExecute, queryToExecute)
-		} else {
-			queriesToExecute = append(queriesToExecute, strings.Split(queryToExecute, query.BREAK_MARKER)...)
-		}
+		queriesToExecute = append(queriesToExecute, strings.Split(queryToExecute, query.BREAK_MARKER)...)
 	default:
 		return errors.Errorf("not supported load method: %s", cfg.LoadMethod)
 	}
