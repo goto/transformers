@@ -28,9 +28,10 @@ type Builder struct {
 	orderedColumns      []string
 	overridedValues     map[string]string
 
-	enableAutoPartition  bool
-	enablePartitionValue bool
-	enableDryRun         bool
+	enableAutoPartition         bool
+	enablePartitionValue        bool
+	enableDryRun                bool
+	disableMultiQueryGeneration bool
 }
 
 // NewBuilder creates a new query builder with the given options
@@ -208,8 +209,8 @@ func (b *Builder) constructOverridedValues(query string) (string, error) {
 
 // constructMergeQueries constructs merge queries with headers and variables
 func (b *Builder) constructMergeQuery(hrs, vars, queries []string) string {
-	if !b.enableDryRun && len(queries) == 1 {
-		// maintaining existing logic for single query
+	// for dry run purposes, multiquery generation will still be generated
+	if !b.enableDryRun && b.disableMultiQueryGeneration {
 		if b.costAttributionTeam != "" {
 			return fmt.Sprintf("%s\n%s", b.query, getCostAttributionComment(b.costAttributionTeam))
 		}

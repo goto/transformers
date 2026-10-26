@@ -159,6 +159,7 @@ func mc2mc(envs []string) error {
 			query.WithCostAttributionLabel(cfg.CostAttributionTeam),
 			query.WithMethod(query.MERGE),
 			query.WithDryRun(cfg.DryRun),
+			query.WithDisableMultiQueryGeneration(cfg.DisableMultiQueryGeneration),
 		).Build()
 		if err != nil {
 			return errors.WithStack(err)

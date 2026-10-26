@@ -31,7 +31,8 @@ func TestBuilder_Build(t *testing.T) {
 			query.WithMethod(query.MERGE),
 		).Build()
 		assert.NoError(t, err)
-		assert.Equal(t, queryToExecute, query)
+		assert.Equal(t, `select * from project.playground.table
+;`, query)
 	})
 	t.Run("returns error for append load method when destination table is not specify", func(t *testing.T) {
 		queryToExecute := `select * from project.playground.table;`
@@ -546,7 +547,16 @@ SET append_test.id = 2;`
 			query.WithMethod(query.MERGE),
 		).Build()
 		assert.NoError(t, err)
-		assert.Equal(t, queryToExecute, query)
+		assert.Equal(t, `SET odps.table.append2.enable=true
+;
+@src := SELECT 1 id
+;
+MERGE INTO append_test
+USING (SELECT * FROM @src) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 2
+;`, query)
 	})
 	t.Run("returns query for merge load method with drop and create table", func(t *testing.T) {
 		queryToExecute := `SET odps.table.append2.enable=true;
@@ -991,6 +1001,63 @@ on append_test.id = source.id
 WHEN MATCHED THEN UPDATE
 SET append_test.id = 2
 ;`, query)
+	})
+
+	t.Run("returns query for merge load method with multiple dml and ddl when disable split merge query is true", func(t *testing.T) {
+		queryToExecute := `SET odps.table.append2.enable=true;
+
+CREATE TABLE IF NOT EXISTS append_test (id bigint)
+TBLPROPERTIES('table.format.version'='2');
+
+INSERT OVERWRITE TABLE append_test VALUES(0),(1);
+
+@src := SELECT 1 id;
+
+MERGE INTO append_test
+USING (SELECT * FROM @src) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 2;`
+		odspClient := &mockOdpsClient{}
+
+		query, err := query.NewBuilder(
+			logger.NewDefaultLogger(),
+			odspClient,
+			query.WithQuery(queryToExecute),
+			query.WithMethod(query.MERGE),
+			query.WithDisableMultiQueryGeneration(true),
+		).Build()
+		assert.NoError(t, err)
+		assert.Equal(t, queryToExecute, query)
+	})
+
+	t.Run("returns query for merge load method with cost attribution label when disable split merge query is true", func(t *testing.T) {
+		queryToExecute := `SET odps.table.append2.enable=true;
+
+CREATE TABLE IF NOT EXISTS append_test (id bigint)
+TBLPROPERTIES('table.format.version'='2');
+
+INSERT OVERWRITE TABLE append_test VALUES(0),(1);
+
+@src := SELECT 1 id;
+
+MERGE INTO append_test
+USING (SELECT * FROM @src) source
+on append_test.id = source.id
+WHEN MATCHED THEN UPDATE
+SET append_test.id = 2;`
+		odspClient := &mockOdpsClient{}
+
+		query, err := query.NewBuilder(
+			logger.NewDefaultLogger(),
+			odspClient,
+			query.WithQuery(queryToExecute),
+			query.WithMethod(query.MERGE),
+			query.WithDisableMultiQueryGeneration(true),
+			query.WithCostAttributionLabel("test-team"),
+		).Build()
+		assert.NoError(t, err)
+		assert.Equal(t, queryToExecute+"\n--cost_attribution_team=test-team\n", query)
 	})
 }
 

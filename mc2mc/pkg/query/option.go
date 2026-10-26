@@ -58,3 +58,9 @@ func WithDryRun(enable bool) Option {
 		b.enableDryRun = enable
 	}
 }
+
+func WithDisableMultiQueryGeneration(disable bool) Option {
+	return func(b *Builder) {
+		b.disableMultiQueryGeneration = disable
+	}
+}
