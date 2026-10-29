@@ -11,16 +11,16 @@ const (
 )
 
 var (
-	semicolonPattern    = regexp.MustCompile(`;\s*(\n+|$)`)                         // regex to match semicolons
-	commentPattern      = regexp.MustCompile(`--[^\n]*`)                            // regex to match comments
-	multiCommentPattern = regexp.MustCompile(`(?s)/\*.*?\*/`)                       // regex to match multi-line comments
-	headerPattern       = regexp.MustCompile(`(?i)^set`)                            // regex to match header statements
-	variablePattern     = regexp.MustCompile(`(?i)^@`)                              // regex to match variable statements
-	dropPattern         = regexp.MustCompile(`(?i)^DROP\s+`)                        // regex to match DROP statements
-	udfPattern          = regexp.MustCompile(`(?i)^function\s+`)                    // regex to match UDF statements
-	ddlPattern          = regexp.MustCompile(`(?i)^(ALTER|DROP|TRUNCATE)\s+`)       // regex to match DDL statements
-	ddlCreatePattern    = regexp.MustCompile(`(?i)^(CREATE\s+TABLE\s+[^\s]+\s*\()`) // regex to match CREATE DDL statements
-	stringPattern       = regexp.MustCompile(`'[^']*'`)                             // regex to match SQL strings (anything inside single quotes)
+	semicolonPattern    = regexp.MustCompile(`;(?:[^\S\n]*(?:--[^\n]*)?)?(?:\n+|$)`) // regex to match semicolons
+	commentPattern      = regexp.MustCompile(`--[^\n]*`)                             // regex to match comments
+	multiCommentPattern = regexp.MustCompile(`(?s)/\*.*?\*/`)                        // regex to match multi-line comments
+	headerPattern       = regexp.MustCompile(`(?i)^set`)                             // regex to match header statements
+	variablePattern     = regexp.MustCompile(`(?i)^@`)                               // regex to match variable statements
+	dropPattern         = regexp.MustCompile(`(?i)^DROP\s+`)                         // regex to match DROP statements
+	udfPattern          = regexp.MustCompile(`(?i)^function\s+`)                     // regex to match UDF statements
+	ddlPattern          = regexp.MustCompile(`(?i)^(ALTER|DROP|TRUNCATE)\s+`)        // regex to match DDL statements
+	ddlCreatePattern    = regexp.MustCompile(`(?i)^(CREATE\s+TABLE\s+[^\s]+\s*\()`)  // regex to match CREATE DDL statements
+	stringPattern       = regexp.MustCompile(`'[^']*'`)                              // regex to match SQL strings (anything inside single quotes)
 )
 
 func SplitQueryComponents(query string) (headers []string, varsUDFs []string, queries []string) {
