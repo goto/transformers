@@ -99,6 +99,26 @@ SET append_test.id = 3`
 			assert.Equal(t, queriesExpected[i], queries[i])
 		}
 	})
+	t.Run("splits statement terminated by semicolon with same-line comment", func(t *testing.T) {
+		q1 := `SET odps.sql.decimal.odps2=true;
+@execution_time := FROM_UTC_TIMESTAMP('{{ .EXECUTION_TIME }}', 'UTC');-- ----------------------------------------------------------
+MERGE INTO tgt USING src ON tgt.id = src.id
+WHEN MATCHED THEN UPDATE SET tgt.v = src.v;`
+		headers, varsUDFs, queries := query.SplitQueryComponents(q1)
+		assert.Len(t, headers, 1)
+		assert.Len(t, varsUDFs, 1)
+		assert.Len(t, queries, 1)
+		assert.Equal(t, "SET odps.sql.decimal.odps2=true\n;", headers[0])
+		assert.Equal(t, "@execution_time := FROM_UTC_TIMESTAMP('{{ .EXECUTION_TIME }}', 'UTC')\n;", varsUDFs[0])
+		assert.Equal(t, `MERGE INTO tgt USING src ON tgt.id = src.id
+WHEN MATCHED THEN UPDATE SET tgt.v = src.v`, queries[0])
+	})
+	t.Run("does not split when real code follows semicolon on the same line", func(t *testing.T) {
+		q1 := `select CONCAT_WS('; ', COLLECT_LIST(dates)) AS dates from presentation.main.important_date`
+		_, _, queries := query.SplitQueryComponents(q1)
+		assert.Len(t, queries, 1)
+		assert.Equal(t, q1, queries[0])
+	})
 }
 
 func TestJoinSliceString(t *testing.T) {

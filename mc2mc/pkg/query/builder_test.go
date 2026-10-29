@@ -1381,3 +1381,28 @@ func (m *mockOdpsClient) ExecSQL(ctx context.Context, query string) error {
 func (m *mockOdpsClient) GetOrderedColumns(tableID string) ([]string, error) {
 	return m.orderedColumns()
 }
+
+func TestBuilder_BuildMergeWithCommentAfterSemicolon(t *testing.T) {
+	t.Run("returns merge query when variable semicolon has same-line comment", func(t *testing.T) {
+		queryToExecute := `SET odps.sql.decimal.odps2=true;
+@execution_time := FROM_UTC_TIMESTAMP('{{ .EXECUTION_TIME }}', 'UTC');-- ----------------------------------------------------------
+MERGE INTO tgt USING src ON tgt.id = src.id
+WHEN MATCHED THEN UPDATE SET tgt.v = src.v;`
+		odspClient := &mockOdpsClient{}
+
+		query, err := query.NewBuilder(
+			logger.NewDefaultLogger(),
+			odspClient,
+			query.WithQuery(queryToExecute),
+			query.WithMethod(query.MERGE),
+		).Build()
+		assert.NoError(t, err)
+		assert.Equal(t, `SET odps.sql.decimal.odps2=true
+;
+@execution_time := FROM_UTC_TIMESTAMP('{{ .EXECUTION_TIME }}', 'UTC')
+;
+MERGE INTO tgt USING src ON tgt.id = src.id
+WHEN MATCHED THEN UPDATE SET tgt.v = src.v
+;`, query)
+	})
+}
