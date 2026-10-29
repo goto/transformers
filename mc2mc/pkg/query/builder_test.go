@@ -1397,6 +1397,12 @@ WHEN MATCHED THEN UPDATE SET tgt.v = src.v;`
 			query.WithMethod(query.MERGE),
 		).Build()
 		assert.NoError(t, err)
-		assert.Equal(t, queryToExecute, query)
+		assert.Equal(t, `SET odps.sql.decimal.odps2=true
+;
+@execution_time := FROM_UTC_TIMESTAMP('{{ .EXECUTION_TIME }}', 'UTC')
+;
+MERGE INTO tgt USING src ON tgt.id = src.id
+WHEN MATCHED THEN UPDATE SET tgt.v = src.v
+;`, query)
 	})
 }
