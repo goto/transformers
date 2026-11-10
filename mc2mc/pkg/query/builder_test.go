@@ -31,8 +31,7 @@ func TestBuilder_Build(t *testing.T) {
 			query.WithMethod(query.MERGE),
 		).Build()
 		assert.NoError(t, err)
-		assert.Equal(t, `select * from project.playground.table
-;`, query)
+		assert.Equal(t, queryToExecute, query)
 	})
 	t.Run("returns error for append load method when destination table is not specify", func(t *testing.T) {
 		queryToExecute := `select * from project.playground.table;`
@@ -547,16 +546,7 @@ SET append_test.id = 2;`
 			query.WithMethod(query.MERGE),
 		).Build()
 		assert.NoError(t, err)
-		assert.Equal(t, `SET odps.table.append2.enable=true
-;
-@src := SELECT 1 id
-;
-MERGE INTO append_test
-USING (SELECT * FROM @src) source
-on append_test.id = source.id
-WHEN MATCHED THEN UPDATE
-SET append_test.id = 2
-;`, query)
+		assert.Equal(t, queryToExecute, query)
 	})
 	t.Run("returns query for merge load method with drop and create table", func(t *testing.T) {
 		queryToExecute := `SET odps.table.append2.enable=true;
