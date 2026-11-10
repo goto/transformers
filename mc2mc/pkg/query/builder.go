@@ -210,7 +210,7 @@ func (b *Builder) constructOverridedValues(query string) (string, error) {
 // constructMergeQueries constructs merge queries with headers and variables
 func (b *Builder) constructMergeQuery(hrs, vars, queries []string) string {
 	// for dry run purposes, multiquery generation will still be generated
-	if !b.enableDryRun && b.disableMultiQueryGeneration {
+	if !b.enableDryRun && (b.disableMultiQueryGeneration || len(queries) <= 1) {
 		if b.costAttributionTeam != "" {
 			return fmt.Sprintf("%s\n%s", b.query, getCostAttributionComment(b.costAttributionTeam))
 		}
