@@ -474,3 +474,10 @@ func TestRestoreStringLiteral(t *testing.T) {
 		assert.Equal(t, `SELECT * FROM project.dataset.table WHERE name = 'john' AND age = 20 AND city = 'new york' AND address = '1234 5th --Ave';`, query)
 	})
 }
+
+func TestIsDDL(t *testing.T) {
+	t.Run("returns true for purge statement", func(t *testing.T) {
+		stmt := `PURGE TABLE project.dataset.table;`
+		assert.True(t, query.IsDDL(stmt))
+	})
+}
